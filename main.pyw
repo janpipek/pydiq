@@ -12,6 +12,10 @@ if __name__ == "__main__":
 
     app = QtGui.QApplication(sys.argv)
 
+    QtCore.QCoreApplication.setApplicationName("pydiq")
+    # QtCore.QCoreApplication.setOrganizationDomain("vzdusne.cz")
+    QtCore.QCoreApplication.setOrganizationName("Jan Pipek")
+
     viewer = pydiq.Viewer(file_name)
     viewer.show()
 
