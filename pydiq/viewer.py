@@ -59,6 +59,28 @@ class Viewer(QtGui.QMainWindow):
         self.load_files(file_name)
         self.file_name = None
 
+        self.build_menu()
+
+    def open_directory(self):
+        dialog = QtGui.QFileDialog(self)
+        dialog.setFileMode(QtGui.QFileDialog.DirectoryOnly)
+        dialog.setViewMode(QtGui.QFileDialog.List)
+        dialog.setOption(QtGui.QFileDialog.ShowDirsOnly, True)
+        if dialog.exec_():
+            self.load_files(os.path.join(str(dialog.selectedFiles()[0]), "*.dcm"))
+
+    def build_menu(self): 
+
+        self.file_menu = QtGui.QMenu('&File', self)
+        self.file_menu.addAction('&Open directory', self.open_directory, QtCore.Qt.CTRL + QtCore.Qt.Key_O)
+        self.file_menu.addAction('&Quit', self.close, QtCore.Qt.CTRL + QtCore.Qt.Key_Q)      
+
+        self.view_menu = QtGui.QMenu('&View', self)
+        # self.
+
+        self.menuBar().addMenu(self.file_menu)
+        self.menuBar().addMenu(self.view_menu)
+
     def on_file_item_change(self):
         if not len(self.file_list.selectedItems()):
             self.file_name = None
@@ -69,7 +91,10 @@ class Viewer(QtGui.QMainWindow):
 
     def load_files(self, glob_string):
         self.file_list.clear()
-        self.files = sorted(glob.glob(glob_string))
+        if glob_string:
+            self.files = sorted(glob.glob(glob_string))
+        else:
+            self.files = ()
         for file_name in self.files:
             item = QtGui.QListWidgetItem(os.path.basename(file_name))
             item.setToolTip(file_name)

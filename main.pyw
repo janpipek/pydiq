@@ -7,8 +7,9 @@ from PyQt4 import QtGui, QtCore
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("No file specified.")
-        sys.exit(-1)
-    file_name = sys.argv[1]
+        file_name = None
+    else:
+        file_name = sys.argv[1]
 
     app = QtGui.QApplication(sys.argv)
 
