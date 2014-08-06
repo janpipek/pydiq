@@ -10,6 +10,8 @@ class TrackingLabel(QtGui.QLabel):
     def __init__(self, parent):
         QtGui.QLabel.__init__(self, parent)
         self.setMouseTracking(True)
+        self.last_move_x = None
+        self.last_move_y = None
 
     def mouseLeaveEvent(self, event):
         self.parent().mouse_x = -1
@@ -21,8 +23,38 @@ class TrackingLabel(QtGui.QLabel):
         self.parent().mouse_y = event.y()
         self.parent().update_coordinates()
 
+        if event.buttons() == QtCore.Qt.LeftButton:
+            self.parent().w += event.y() - self.last_move_y
+            self.parent().c += event.x() - self.last_move_x
+
+            self.last_move_x = event.x()
+            self.last_move_y = event.y()
+
     def mousePressEvent(self, event):
-        print "MOUSE"
+        self.last_move_x = event.x()
+        self.last_move_y = event.y()
+
+    def mouseReleaseEvent(self, event):
+        self.last_move_x = None
+        self.last_move_y = None
+
+    def wheelEvent(self, event):
+        file_list = self.parent().file_list
+        if len(file_list.selectedItems()):
+            index = file_list.row(file_list.selectedItems()[0])
+        else:
+            index = -1
+        if event.delta() > 0:
+            index -= 1
+        else:
+            index += 1
+
+        if index >= file_list.count() or index == -2:
+            index = file_list.count() - 1
+        elif index < 0:
+            index = 0
+
+        file_list.setCurrentItem(file_list.item(index))
 
 class Viewer(QtGui.QMainWindow):
     def __init__(self, file_name = None):
@@ -151,8 +183,9 @@ class Viewer(QtGui.QMainWindow):
 
     @c.setter
     def c(self, value):
-        self.low_hu = self.low_hu + value
-        self.high_hu = self.high_hu + value        
+        original = self.c
+        self.low_hu = self.low_hu + (value - original)
+        self.high_hu = self.high_hu + (value - original)
         self.update_cw()
 
     @property
@@ -161,8 +194,11 @@ class Viewer(QtGui.QMainWindow):
 
     @w.setter
     def w(self, value):
-        self.low_hu = self.low_hu - (value - self.w)
-        self.high_hu = self.low_hu + self.w
+        if value < 0:
+            value = 0
+        original = self.w
+        self.low_hu = self.low_hu - (value - original) / 2
+        self.high_hu = self.low_hu + value
         self.update_cw() 
 
     def update_cw(self):
