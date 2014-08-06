@@ -21,6 +21,9 @@ class TrackingLabel(QtGui.QLabel):
         self.parent().mouse_y = event.y()
         self.parent().update_coordinates()
 
+    def mousePressEvent(self, event):
+        print "MOUSE"
+
 class Viewer(QtGui.QMainWindow):
     def __init__(self, file_name = None):
         QtGui.QMainWindow.__init__(self)
@@ -42,6 +45,8 @@ class Viewer(QtGui.QMainWindow):
         self.file_dock.setWidget(self.file_list)
 
         self.hu_label = QtGui.QLabel("No image")
+        self.c_label = QtGui.QLabel("")
+        self.w_label = QtGui.QLabel("")        
         self.x_label = QtGui.QLabel("")
         self.y_label = QtGui.QLabel("")
         self.z_label = QtGui.QLabel("")
@@ -49,12 +54,17 @@ class Viewer(QtGui.QMainWindow):
 
         self.mouse_x = -1
         self.mouse_y = -1
-        
+       
+        self.statusBar().addPermanentWidget(self.c_label)
+        self.statusBar().addPermanentWidget(self.w_label)
         self.statusBar().addPermanentWidget(self.ij_label)
         self.statusBar().addPermanentWidget(self.x_label)
         self.statusBar().addPermanentWidget(self.y_label)
         self.statusBar().addPermanentWidget(self.z_label)
         self.statusBar().addPermanentWidget(self.hu_label)
+
+        self.data = np.ndarray((512, 512), np.int8)
+        self.update_cw()
 
         self.load_files(file_name)
         self.file_name = None
@@ -102,7 +112,7 @@ class Viewer(QtGui.QMainWindow):
         self.file_list.setMinimumWidth(self.file_list.sizeHintForColumn(0) + 20)
         self.file_name = None
 
-    def create_qimage(self, input_file, low_hu = -1024, high_hu = 2000):
+    def create_qimage(self, low_hu = -1024, high_hu = 2000):
         data = (self.data - low_hu) / (high_hu - low_hu) * 256
         data[data < 0] = 0
         data[data > 255] = 255
@@ -124,7 +134,7 @@ class Viewer(QtGui.QMainWindow):
             if self.mouse_x >= 0 and self.mouse_y >= 0 and self.mouse_x < self.data.shape[0] and self.mouse_y < self.data.shape[1]:
                 self.x_label.setText("x: %.2f" % x)
                 self.y_label.setText("y: %.2f" % y)
-                self.ij_label.setText("(%d,%d)" % (self.mouse_x, self.mouse_y))
+                self.ij_label.setText("Pos: (%d,%d)" % (self.mouse_x, self.mouse_y))
                 self.hu_label.setText("HU: %d" % int(self.data[self.mouse_y, self.mouse_x]))
                 return
             else:
@@ -134,6 +144,31 @@ class Viewer(QtGui.QMainWindow):
         self.ij_label.setText("")
         self.x_label.setText("")
         self.y_label.setText("")    
+
+    @property
+    def c(self):
+        return (self.high_hu + self.low_hu) / 2
+
+    @c.setter
+    def c(self, value):
+        self.low_hu = self.low_hu + value
+        self.high_hu = self.high_hu + value        
+        self.update_cw()
+
+    @property
+    def w(self):
+        return self.high_hu - self.low_hu
+
+    @w.setter
+    def w(self, value):
+        self.low_hu = self.low_hu - (value - self.w)
+        self.high_hu = self.low_hu + self.w
+        self.update_cw() 
+
+    def update_cw(self):
+        self.w_label.setText("W: %d" % int(self.w))
+        self.c_label.setText("C: %d" % int(self.c))
+        self.update_image()
 
     @property
     def file_name(self):
@@ -147,7 +182,7 @@ class Viewer(QtGui.QMainWindow):
             return None
 
     def update_image(self):
-        self.image = self.create_qimage(self.file, self.low_hu, self.high_hu)
+        self.image = self.create_qimage(self.low_hu, self.high_hu)
 
     @image.setter
     def image(self, value):
