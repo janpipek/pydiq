@@ -19,7 +19,7 @@ except:
 if error:
     sys.exit(-1)
 
-import pydiq
+from viewer import Viewer
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     QtCore.QCoreApplication.setApplicationName("pydiq")
     QtCore.QCoreApplication.setOrganizationName("Jan Pipek")
 
-    viewer = pydiq.Viewer(path)
+    viewer = Viewer(path)
     viewer.show()
 
     sys.exit(app.exec_())
