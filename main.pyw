@@ -10,18 +10,16 @@ except:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("No file specified.")
-        file_name = None
+        path = "."
     else:
-        file_name = sys.argv[1]
+        path = sys.argv[1]
 
     app = QtGui.QApplication(sys.argv)
 
     QtCore.QCoreApplication.setApplicationName("pydiq")
-    # QtCore.QCoreApplication.setOrganizationDomain("vzdusne.cz")
     QtCore.QCoreApplication.setOrganizationName("Jan Pipek")
 
-    viewer = pydiq.Viewer(file_name)
+    viewer = pydiq.Viewer(path)
     viewer.show()
 
     sys.exit(app.exec_())

@@ -61,7 +61,7 @@ class TrackingLabel(QtGui.QLabel):
         file_list.setCurrentItem(file_list.item(index))
 
 class Viewer(QtGui.QMainWindow):
-    def __init__(self, file_name = None):
+    def __init__(self, path = None):
         QtGui.QMainWindow.__init__(self)
         self.setWindowTitle("pydiq - Python DICOM Viewer in Qt4")
         self.file = None
@@ -102,9 +102,10 @@ class Viewer(QtGui.QMainWindow):
         self.data = np.ndarray((512, 512), np.int8)
         self.update_cw()
 
-        self.load_files(file_name)
-        self.file_name = None
-
+        if os.path.isfile(path):
+            self.load_files(path)
+        elif os.path.isdir(path):
+            self.load_files(os.path.join(path, "*.dcm"))
         self.build_menu()
 
     def open_directory(self):
@@ -116,7 +117,6 @@ class Viewer(QtGui.QMainWindow):
             self.load_files(os.path.join(str(dialog.selectedFiles()[0]), "*.dcm"))
 
     def build_menu(self): 
-
         self.file_menu = QtGui.QMenu('&File', self)
         self.file_menu.addAction('&Open directory', self.open_directory, QtCore.Qt.CTRL + QtCore.Qt.Key_O)
         self.file_menu.addAction('&Quit', self.close, QtCore.Qt.CTRL + QtCore.Qt.Key_Q)      
@@ -146,7 +146,8 @@ class Viewer(QtGui.QMainWindow):
             item.setToolTip(file_name)
             self.file_list.addItem(item)
         self.file_list.setMinimumWidth(self.file_list.sizeHintForColumn(0) + 20)
-        self.file_name = None
+        if self.files:
+            self.file_name = self.files[0]
 
     def create_qimage(self, low_hu = -1024, high_hu = 2000):
         data = (self.data - low_hu) / (high_hu - low_hu) * 256
