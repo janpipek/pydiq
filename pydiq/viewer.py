@@ -1,6 +1,10 @@
 from __future__ import division
 
-from PyQt4 import QtGui, QtCore
+try:
+    from PyQt4 import QtGui, QtCore
+except:
+    from PySide import QtGui, QtCore
+
 import dicom
 import numpy as np
 import glob

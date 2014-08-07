@@ -2,7 +2,11 @@
 
 import sys
 import pydiq
-from PyQt4 import QtGui, QtCore
+
+try:
+    from PyQt4 import QtGui, QtCore
+except:
+    from PySide import QtGui, QtCore
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
