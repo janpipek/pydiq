@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import sys
 
 # Try imports and report missing packages.
@@ -21,7 +20,7 @@ if error:
 
 from viewer import Viewer
 
-if __name__ == "__main__":
+def run_app():
     if len(sys.argv) < 2:
         path = "."
     else:
