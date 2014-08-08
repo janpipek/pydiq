@@ -94,7 +94,7 @@ class Viewer(QtGui.QMainWindow):
         self.z_label = QtGui.QLabel("")
         self.ij_label = QtGui.QLabel("")
 
-        self._zoom = 4
+        self._zoom = 1
         self.mouse_x = -1
         self.mouse_y = -1
        
@@ -131,8 +131,20 @@ class Viewer(QtGui.QMainWindow):
         self.view_menu.addAction('Zoom In', self.increase_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Plus)
         self.view_menu.addAction('Zoom Out', self.decrease_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Minus)
 
+        fullscreen = QtGui.QAction('&Full Screen', self)
+        fullscreen.setCheckable(True)
+        fullscreen.setShortcut(QtCore.Qt.Key_F11)
+        fullscreen.toggled.connect(self.toggle_full_screen)
+        self.view_menu.addAction(fullscreen)
+
         self.menuBar().addMenu(self.file_menu)
         self.menuBar().addMenu(self.view_menu)
+
+    def toggle_full_screen(self, toggled):
+        if toggled:
+            self.setWindowState(QtCore.Qt.WindowFullScreen)
+        else:
+            self.setWindowState(QtCore.Qt.WindowNoState)
 
     def on_file_item_change(self):
         if not len(self.file_list.selectedItems()):
