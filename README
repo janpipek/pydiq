@@ -6,13 +6,14 @@ Features
 --------
 
 * Easy (and fast) viewing of all images in a directory
+* Zooming
 * Mouse control of window center and width (as is Aeskulap Viewer)
 * Proper measurement of Hounsfield units and position by mouse
 
 To Do
 -----
 
-* Zooming
+* Better zooming
 * MRI images support
 * RT dose images support
 * Integration of anonymizition features (see https://github.com/janpipek/anonymize_dicom )

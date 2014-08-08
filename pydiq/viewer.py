@@ -16,6 +16,7 @@ class TrackingLabel(QtGui.QLabel):
         self.setMouseTracking(True)
         self.last_move_x = None
         self.last_move_y = None
+        self.window = parent
 
     def mouseLeaveEvent(self, event):
         self.parent().mouse_x = -1
@@ -23,13 +24,13 @@ class TrackingLabel(QtGui.QLabel):
         self.parent().update_coordinates()
 
     def mouseMoveEvent(self, event):
-        self.parent().mouse_x = event.x()
-        self.parent().mouse_y = event.y()
-        self.parent().update_coordinates()
+        self.window.mouse_x = event.x()
+        self.window.mouse_y = event.y()
+        self.window.update_coordinates()
 
         if event.buttons() == QtCore.Qt.LeftButton:
-            self.parent().w += event.y() - self.last_move_y
-            self.parent().c += event.x() - self.last_move_x
+            self.window.w += event.y() - self.last_move_y
+            self.window.c += event.x() - self.last_move_x
 
             self.last_move_x = event.x()
             self.last_move_y = event.y()
@@ -43,7 +44,7 @@ class TrackingLabel(QtGui.QLabel):
         self.last_move_y = None
 
     def wheelEvent(self, event):
-        file_list = self.parent().file_list
+        file_list = self.window.file_list
         if len(file_list.selectedItems()):
             index = file_list.row(file_list.selectedItems()[0])
         else:
@@ -71,7 +72,12 @@ class Viewer(QtGui.QMainWindow):
        
         self.pix_label = TrackingLabel(self)
         self.color_table = [QtGui.qRgb(i, i, i) for i in range(256)]
-        self.setCentralWidget(self.pix_label)
+
+        scroll_area = QtGui.QScrollArea()
+        scroll_area.setWidget(self.pix_label)
+
+        # self.setCentralWidget(self.pix_label)
+        self.setCentralWidget(scroll_area)
 
         self.file_dock = QtGui.QDockWidget("Files", self)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.file_dock)
@@ -82,17 +88,17 @@ class Viewer(QtGui.QMainWindow):
 
         self.hu_label = QtGui.QLabel("No image")
         self.c_label = QtGui.QLabel("")
-        self.w_label = QtGui.QLabel("")        
+        self.cw_label = QtGui.QLabel("")        
         self.x_label = QtGui.QLabel("")
         self.y_label = QtGui.QLabel("")
         self.z_label = QtGui.QLabel("")
         self.ij_label = QtGui.QLabel("")
 
+        self._zoom = 4
         self.mouse_x = -1
         self.mouse_y = -1
        
-        self.statusBar().addPermanentWidget(self.c_label)
-        self.statusBar().addPermanentWidget(self.w_label)
+        self.statusBar().addPermanentWidget(self.cw_label)
         self.statusBar().addPermanentWidget(self.ij_label)
         self.statusBar().addPermanentWidget(self.x_label)
         self.statusBar().addPermanentWidget(self.y_label)
@@ -122,7 +128,8 @@ class Viewer(QtGui.QMainWindow):
         self.file_menu.addAction('&Quit', self.close, QtCore.Qt.CTRL + QtCore.Qt.Key_Q)      
 
         self.view_menu = QtGui.QMenu('&View', self)
-        # self.
+        self.view_menu.addAction('Zoom In', self.increase_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Plus)
+        self.view_menu.addAction('Zoom Out', self.decrease_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Minus)
 
         self.menuBar().addMenu(self.file_menu)
         self.menuBar().addMenu(self.view_menu)
@@ -158,21 +165,49 @@ class Viewer(QtGui.QMainWindow):
         qimage = QtGui.QImage(data, data.shape[0], data.shape[1], QtGui.QImage.Format_Indexed8)
         return qimage  
 
-    def get_coordinates(self, x, y):
-        x = self.image_position[0] + self.pixel_spacing[0] * x
-        y = self.image_position[1] + self.pixel_spacing[1] * y
+    def get_coordinates(self, i, j):
+        x = self.image_position[0] + self.pixel_spacing[0] * i
+        y = self.image_position[1] + self.pixel_spacing[1] * j
         z = self.image_position[2]
         return x, y, z
 
+    @property
+    def zoom(self):
+        return self._zoom
+
+    @zoom.setter
+    def zoom(self, value):
+        self._zoom = value
+        self.update_image()
+        self.update_coordinates()
+
+    def decrease_zoom(self):
+        if self.zoom > 1:
+            self.zoom -= 1
+
+    def increase_zoom(self):
+        self.zoom += 1
+
+    @property
+    def mouse_ij(self):
+        '''Mouse position as voxel index in current DICOM slice.'''
+        return self.mouse_x // self.zoom, self.mouse_y // self.zoom
+
+    @property
+    def mouse_xyz(self):
+        '''Mouse position in DICOM coordinates.'''
+        return self.get_coordinates(*self.mouse_ij)
+
     def update_coordinates(self):
         if self.file:
-            x, y, z = self.get_coordinates(self.mouse_x, self.mouse_y)
+            x, y, z = self.mouse_xyz
+            i, j = self.mouse_ij
             self.z_label.setText("z: %.2f" % z)
-            if self.mouse_x >= 0 and self.mouse_y >= 0 and self.mouse_x < self.data.shape[0] and self.mouse_y < self.data.shape[1]:
+            if i >= 0 and j >= 0 and i < self.data.shape[0] and j < self.data.shape[1]:
                 self.x_label.setText("x: %.2f" % x)
                 self.y_label.setText("y: %.2f" % y)
-                self.ij_label.setText("Pos: (%d,%d)" % (self.mouse_x, self.mouse_y))
-                self.hu_label.setText("HU: %d" % int(self.data[self.mouse_y, self.mouse_x]))
+                self.ij_label.setText("Pos: (%d,%d)" % self.mouse_ij)
+                self.hu_label.setText("HU: %d" % int(self.data[j, i]))
                 return
             else:
                 self.hu_label.setText("HU: ???")     
@@ -207,8 +242,7 @@ class Viewer(QtGui.QMainWindow):
         self.update_cw() 
 
     def update_cw(self):
-        self.w_label.setText("W: %d" % int(self.w))
-        self.c_label.setText("C: %d" % int(self.c))
+        self.cw_label.setText("W: %d C: %d" % (int(self.w), int(self.c)))
         self.update_image()
 
     @property
@@ -230,7 +264,10 @@ class Viewer(QtGui.QMainWindow):
         self._image = value
         self._image.setColorTable(self.color_table)
         pixmap = QtGui.QPixmap.fromImage(self._image)
+        if self.zoom != 1:
+            pixmap = pixmap.scaled(pixmap.width() * self.zoom,  pixmap.height() * self.zoom, QtCore.Qt.KeepAspectRatio)
         self.pix_label.setPixmap(pixmap)
+        self.pix_label.resize(pixmap.width(), pixmap.height())
 
     @file_name.setter
     def file_name(self, value):

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys
 
 # Try imports and report missing packages.
@@ -35,3 +36,6 @@ def run_app():
     viewer.show()
 
     sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    run_app()
