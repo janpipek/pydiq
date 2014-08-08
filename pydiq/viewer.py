@@ -191,12 +191,12 @@ class Viewer(QtGui.QMainWindow):
     @property
     def mouse_ij(self):
         '''Mouse position as voxel index in current DICOM slice.'''
-        return self.mouse_x // self.zoom, self.mouse_y // self.zoom
+        return self.mouse_y // self.zoom, self.mouse_x // self.zoom
 
     @property
     def mouse_xyz(self):
         '''Mouse position in DICOM coordinates.'''
-        return self.get_coordinates(*self.mouse_ij)
+        return self.get_coordinates(*reversed(self.mouse_ij))
 
     def update_coordinates(self):
         if self.file:
@@ -206,8 +206,8 @@ class Viewer(QtGui.QMainWindow):
             if i >= 0 and j >= 0 and i < self.data.shape[0] and j < self.data.shape[1]:
                 self.x_label.setText("x: %.2f" % x)
                 self.y_label.setText("y: %.2f" % y)
-                self.ij_label.setText("Pos: (%d,%d)" % self.mouse_ij)
-                self.hu_label.setText("HU: %d" % int(self.data[j, i]))
+                self.ij_label.setText("Pos: (%d, %d)" % self.mouse_ij)
+                self.hu_label.setText("HU: %d" % int(self.data[i, j]))
                 return
             else:
                 self.hu_label.setText("HU: ???")     
