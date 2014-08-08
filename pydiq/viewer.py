@@ -71,6 +71,7 @@ class Viewer(QtGui.QMainWindow):
         self.low_hu = -1024
        
         self.pix_label = TrackingLabel(self)
+        self.pix_label.setCursor(QtCore.Qt.CrossCursor)
         self.color_table = [QtGui.qRgb(i, i, i) for i in range(256)]
 
         scroll_area = QtGui.QScrollArea()
@@ -92,6 +93,7 @@ class Viewer(QtGui.QMainWindow):
         self.x_label = QtGui.QLabel("")
         self.y_label = QtGui.QLabel("")
         self.z_label = QtGui.QLabel("")
+        self.use_fractional_coordinates = True
         self.ij_label = QtGui.QLabel("")
 
         self._zoom = 1
@@ -208,7 +210,10 @@ class Viewer(QtGui.QMainWindow):
     @property
     def mouse_xyz(self):
         '''Mouse position in DICOM coordinates.'''
-        return self.get_coordinates(*reversed(self.mouse_ij))
+        if self.use_fractional_coordinates:
+            return self.get_coordinates(self.mouse_x / self.zoom, self.mouse_y / self.zoom)
+        else:
+            return self.get_coordinates(self.mouse_x // self.zoom, self.mouse_y // self.zoom)
 
     def update_coordinates(self):
         if self.file:
