@@ -211,7 +211,8 @@ class Viewer(QtGui.QMainWindow):
     def mouse_xyz(self):
         '''Mouse position in DICOM coordinates.'''
         if self.use_fractional_coordinates:
-            return self.get_coordinates(self.mouse_x / self.zoom, self.mouse_y / self.zoom)
+            correction = (self.zoom - 1.) / (2. * self.zoom) # To get center of left top pixel in a zoom grid
+            return self.get_coordinates(self.mouse_x / self.zoom - correction, self.mouse_y / self.zoom - correction)
         else:
             return self.get_coordinates(self.mouse_x // self.zoom, self.mouse_y // self.zoom)
 
