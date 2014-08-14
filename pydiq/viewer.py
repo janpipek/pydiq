@@ -132,15 +132,23 @@ class Viewer(QtGui.QMainWindow):
         self.view_menu = QtGui.QMenu('&View', self)
         self.view_menu.addAction('Zoom In', self.increase_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Plus)
         self.view_menu.addAction('Zoom Out', self.decrease_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Minus)
-
         fullscreen = QtGui.QAction('&Full Screen', self)
         fullscreen.setCheckable(True)
         fullscreen.setShortcut(QtCore.Qt.Key_F11)
         fullscreen.toggled.connect(self.toggle_full_screen)
         self.view_menu.addAction(fullscreen)
 
+        self.tools_menu = QtGui.QMenu("&Tools", self)
+        self.tools_menu.addAction('&Show DICOM structure', self.show_structure, QtCore.Qt.Key_F2)
+
         self.menuBar().addMenu(self.file_menu)
         self.menuBar().addMenu(self.view_menu)
+        self.menuBar().addMenu(self.tools_menu)
+
+    def show_structure(self):
+        if self.file_name:
+            f = dicom.read_file(self.file_name)
+            print str(f)
 
     def toggle_full_screen(self, toggled):
         if toggled:
