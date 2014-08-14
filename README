@@ -17,6 +17,7 @@ To Do
 * MRI images support
 * RT dose images support
 * Integration of anonymizition features (see https://github.com/janpipek/anonymize_dicom )
+* Information from the DICOM file in user-friendly display
 
 Dependencies
 ------------
