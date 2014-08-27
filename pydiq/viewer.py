@@ -300,13 +300,17 @@ class Viewer(QtGui.QMainWindow):
         self._file_name = value
         try:
             self.file = dicom.read_file(self._file_name)
-            self.data = self.file.RescaleSlope * self.file.pixel_array + self.file.RescaleIntercept
+            self.modality = self.file.Modality
+            if self.modality == "CT":
+                self.data = self.file.RescaleSlope * self.file.pixel_array + self.file.RescaleIntercept
+            else:
+                self.data = self.file.pixel_array
             self.image_position = np.array([float(t) for t in self.file.ImagePositionPatient])
             self.pixel_spacing = np.array([float(t) for t in self.file.PixelSpacing])
             self.setWindowTitle("pydiq: " + self._file_name)
         except:
             self.file = None
-            self.data = np.ndarray((512, 512), np.int8)
+            self.data = np.ndarray((0, 0), np.int8)
             self.update_image()
             self.setWindowTitle("pydiq: No image")
         self.update_coordinates()
