@@ -1,4 +1,5 @@
 [![Latest Version](https://pypip.in/version/pydiq/badge.svg)](https://pypi.python.org/pypi/pydiq/)
+[![License](https://pypip.in/license/pydiq/badge.svg)](https://pypi.python.org/pypi/pydiq/)
 [![DOI](https://zenodo.org/badge/3862/janpipek/pydiq.png)](http://dx.doi.org/10.5281/zenodo.11480)
 
 pydiq
