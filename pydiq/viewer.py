@@ -124,9 +124,20 @@ class Viewer(QtGui.QMainWindow):
         if dialog.exec_():
             self.load_files(os.path.join(str(dialog.selectedFiles()[0]), "*.dcm"))
 
+    def export_image(self):
+        file_name = QtGui.QFileDialog.getSaveFileName(
+            self,
+            "Save file",
+            os.path.expanduser("~/dicom-export.png"),
+            "PNG images (*.png)"
+        )
+        if file_name:
+            self._image.save(file_name)
+
     def build_menu(self): 
         self.file_menu = QtGui.QMenu('&File', self)
         self.file_menu.addAction('&Open directory', self.open_directory, QtCore.Qt.CTRL + QtCore.Qt.Key_O)
+        self.file_menu.addAction('&Export image', self.export_image, QtCore.Qt.CTRL + QtCore.Qt.Key_S)
         self.file_menu.addAction('&Quit', self.close, QtCore.Qt.CTRL + QtCore.Qt.Key_Q)      
 
         self.view_menu = QtGui.QMenu('&View', self)

@@ -13,6 +13,7 @@ Features
 * Zooming
 * Mouse control of window center and width (as is Aeskulap Viewer)
 * Proper measurement of Hounsfield units and position by mouse
+* PNG image export
 
 To Do
 -----
@@ -22,7 +23,6 @@ To Do
 * RT dose images support
 * View in different planes (rectangular + others)
 * Coordinate mapping (using translation and rotation matrix)
-* Image export
 * Integration of anonymization features (see https://github.com/janpipek/anonymize_dicom )
 * Information from the DICOM file in user-friendly display
 
