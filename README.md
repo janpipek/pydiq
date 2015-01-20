@@ -4,7 +4,7 @@
 
 pydiq
 =====
-Simple open-source DICOM browser/viewer in Python and Qt4.
+Simple open-source multi-platform DICOM browser/viewer in Python and Qt4.
 
 Features
 --------
@@ -31,6 +31,8 @@ Dependencies
 
 * PyQt4 / PySide
 * pydicom
+
+Tested on Linux and Windows.
 
 Installation
 ------------
