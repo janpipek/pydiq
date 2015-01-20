@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pydiq',
-    version='0.1.6',
+    version='0.1.7',
     packages=find_packages(),
     license='MIT',
     description='Simple open-source DICOM browser/viewer in Python and Qt4.',
