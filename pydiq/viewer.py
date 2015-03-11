@@ -316,10 +316,14 @@ class Viewer(QtGui.QMainWindow):
                 self.data = self.file.RescaleSlope * self.file.pixel_array + self.file.RescaleIntercept
             else:
                 self.data = self.file.pixel_array
-            self.image_position = np.array([float(t) for t in self.file.ImagePositionPatient])
+            try:
+                self.image_position = np.array([float(t) for t in self.file.ImagePositionPatient])
+            except:
+                self.image_position = np.array([1., 1., 1.])
             self.pixel_spacing = np.array([float(t) for t in self.file.PixelSpacing])
             self.setWindowTitle("pydiq: " + self._file_name)
-        except:
+        except BaseException as exc:
+            print exc
             self.file = None
             self.data = np.ndarray((0, 0), np.int8)
             self.update_image()
