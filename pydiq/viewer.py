@@ -195,7 +195,7 @@ class Viewer(QtGui.QMainWindow):
         data[data > 255] = 255
         data = data.astype(np.int8)
 
-        qimage = QtGui.QImage(data, data.shape[0], data.shape[1], QtGui.QImage.Format_Indexed8)
+        qimage = QtGui.QImage(data, data.shape[1], data.shape[0], QtGui.QImage.Format_Indexed8)
         return qimage  
 
     def get_coordinates(self, i, j):
