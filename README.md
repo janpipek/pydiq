@@ -41,6 +41,6 @@ The easiest way is `pip install pydiq`.
 Limitations
 -----------
 
-Currently, the viewer supports only Computed Tomography (CT) and
+Currently, the viewer supports only Computed Radiography (CR), Computed Tomography (CT) and
 Magnetic Resonance Imaging (MRI) images with normal orientation (x, y, z)
 in one-slice-per-file format.
