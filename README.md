@@ -6,6 +6,8 @@ pydiq
 =====
 Simple open-source multi-platform DICOM browser/viewer in Python and Qt4.
 
+![Vertebrae](https://raw.githubusercontent.com/janpipek/pydiq/master/doc/vertebra.png "Vertebrae")
+
 Features
 --------
 
