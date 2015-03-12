@@ -10,7 +10,7 @@ Features
 --------
 
 * Easy (and fast) viewing of all images in a directory
-* Zooming
+* Zooming (1:N and N:1)
 * Mouse control of window center and width (as is Aeskulap Viewer)
 * Proper measurement of Hounsfield units and position by mouse
 * PNG image export
