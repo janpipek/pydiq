@@ -208,6 +208,13 @@ class Viewer(QtGui.QMainWindow):
     def zoom(self):
         return self._zoom
 
+    @property
+    def real_zoom(self):
+        if self._zoom >= 1:
+            return self._zoom
+        else:
+            return 1.0 / (1 - self._zoom)
+
     @zoom.setter
     def zoom(self, value):
         self._zoom = value
@@ -215,25 +222,31 @@ class Viewer(QtGui.QMainWindow):
         self.update_coordinates()
 
     def decrease_zoom(self):
-        if self.zoom > 1:
+        if self.zoom != 1:
             self.zoom -= 1
+        elif self.zoom == 1:
+            self.zoom = -1
+
 
     def increase_zoom(self):
-        self.zoom += 1
+        if self.zoom != -1:
+            self.zoom += 1
+        else:
+            self.zoom = 1
 
     @property
     def mouse_ij(self):
         '''Mouse position as voxel index in current DICOM slice.'''
-        return self.mouse_y // self.zoom, self.mouse_x // self.zoom
+        return self.mouse_y // self.real_zoom, self.mouse_x // self.real_zoom
 
     @property
     def mouse_xyz(self):
         '''Mouse position in DICOM coordinates.'''
         if self.use_fractional_coordinates:
-            correction = (self.zoom - 1.) / (2. * self.zoom) # To get center of left top pixel in a zoom grid
-            return self.get_coordinates(self.mouse_x / self.zoom - correction, self.mouse_y / self.zoom - correction)
+            correction = (self.real_zoom - 1.) / (2. * self.real_zoom) # To get center of left top pixel in a zoom grid
+            return self.get_coordinates(self.mouse_x / self.real_zoom - correction, self.mouse_y / self.real_zoom - correction)
         else:
-            return self.get_coordinates(self.mouse_x // self.zoom, self.mouse_y // self.zoom)
+            return self.get_coordinates(self.mouse_x // self.real_zoom, self.mouse_y // self.real_zoom)
 
     def update_coordinates(self):
         if self.file:
@@ -302,7 +315,11 @@ class Viewer(QtGui.QMainWindow):
         self._image.setColorTable(self.color_table)
         pixmap = QtGui.QPixmap.fromImage(self._image)
         if self.zoom != 1:
-            pixmap = pixmap.scaled(pixmap.width() * self.zoom,  pixmap.height() * self.zoom, QtCore.Qt.KeepAspectRatio)
+            if self.zoom < 1:
+                zoom = 1.0 / (1 - self.zoom)
+                pixmap = pixmap.scaled(pixmap.width() * zoom,  pixmap.height() * zoom, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
+            else:
+                pixmap = pixmap.scaled(pixmap.width() * self.zoom,  pixmap.height() * self.zoom, QtCore.Qt.KeepAspectRatio)
         self.pix_label.setPixmap(pixmap)
         self.pix_label.resize(pixmap.width(), pixmap.height())
 
