@@ -96,7 +96,7 @@ class Viewer(QtGui.QMainWindow):
         self.use_fractional_coordinates = True
         self.ij_label = QtGui.QLabel("")
 
-        self._zoom = 1
+        self._zoom_level = 1
         self.mouse_x = -1
         self.mouse_y = -1
        
@@ -205,48 +205,48 @@ class Viewer(QtGui.QMainWindow):
         return x, y, z
 
     @property
-    def zoom(self):
-        return self._zoom
+    def zoom_level(self):
+        """Zoom level.
+
+        An integer value useful for the GUI
+        0 = 1:1, positive values = zoom in, negative values = zoom out
+        """
+        return self._zoom_level
 
     @property
-    def real_zoom(self):
-        if self._zoom >= 1:
-            return self._zoom
+    def zoom_factor(self):
+        """Real size of data voxel in screen pixels."""
+        if self._zoom_level > 0:
+            return self._zoom_level + 1
         else:
-            return 1.0 / (1 - self._zoom)
+            return 1.0 / (1 - self._zoom_level)
 
-    @zoom.setter
-    def zoom(self, value):
-        self._zoom = value
+    @zoom_level.setter
+    def zoom_level(self, value):
+        self._zoom_level = value
         self.update_image()
         self.update_coordinates()
 
     def decrease_zoom(self):
-        if self.zoom != 1:
-            self.zoom -= 1
-        elif self.zoom == 1:
-            self.zoom = -1
-
+        self.zoom_level -= 1
 
     def increase_zoom(self):
-        if self.zoom != -1:
-            self.zoom += 1
-        else:
-            self.zoom = 1
+        self.zoom_level += 1
 
     @property
     def mouse_ij(self):
         '''Mouse position as voxel index in current DICOM slice.'''
-        return self.mouse_y // self.real_zoom, self.mouse_x // self.real_zoom
+        return self.mouse_y // self.zoom_factor, self.mouse_x // self.zoom_factor
 
     @property
     def mouse_xyz(self):
         '''Mouse position in DICOM coordinates.'''
         if self.use_fractional_coordinates:
-            correction = (self.real_zoom - 1.) / (2. * self.real_zoom) # To get center of left top pixel in a zoom grid
-            return self.get_coordinates(self.mouse_x / self.real_zoom - correction, self.mouse_y / self.real_zoom - correction)
+            # TODO: Fix for zoom out
+            correction = (self.zoom_factor - 1.) / (2. * self.zoom_factor) # To get center of left top pixel in a zoom grid
+            return self.get_coordinates(self.mouse_x / self.zoom_factor - correction, self.mouse_y / self.zoom_factor - correction)
         else:
-            return self.get_coordinates(self.mouse_x // self.real_zoom, self.mouse_y // self.real_zoom)
+            return self.get_coordinates(self.mouse_x // self.zoom_factor, self.mouse_y // self.zoom_factor)
 
     def update_coordinates(self):
         if self.file:
@@ -314,12 +314,11 @@ class Viewer(QtGui.QMainWindow):
         self._image = value
         self._image.setColorTable(self.color_table)
         pixmap = QtGui.QPixmap.fromImage(self._image)
-        if self.zoom != 1:
-            if self.zoom < 1:
-                zoom = 1.0 / (1 - self.zoom)
-                pixmap = pixmap.scaled(pixmap.width() * zoom,  pixmap.height() * zoom, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
+        if self.zoom_factor != 1:
+            if self.zoom_factor < 1:
+                pixmap = pixmap.scaled(pixmap.width() * self.zoom_factor,  pixmap.height() * self.zoom_factor, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
             else:
-                pixmap = pixmap.scaled(pixmap.width() * self.zoom,  pixmap.height() * self.zoom, QtCore.Qt.KeepAspectRatio)
+                pixmap = pixmap.scaled(pixmap.width() * self.zoom_factor,  pixmap.height() * self.zoom_factor, QtCore.Qt.KeepAspectRatio)
         self.pix_label.setPixmap(pixmap)
         self.pix_label.resize(pixmap.width(), pixmap.height())
 
