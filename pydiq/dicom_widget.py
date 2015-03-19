@@ -22,6 +22,7 @@ class DicomWidget(QtGui.QLabel):
         self._high_hu = kwargs.get("high_hu", 3000)
         self._plane = kwargs.get("plane", dicom_data.AXIAL)
         self._slice = kwargs.get("slice", 0)
+        self._color_table = kwargs.get("color_table", [QtGui.qRgb(i, i, i) for i in range(256)])
 
         self._image = None
         self._pixmap = None
@@ -70,6 +71,15 @@ class DicomWidget(QtGui.QLabel):
             self._zoom_level = value
             self.zoom_changed.emit()
 
+    def decrease_zoom(self, amount=1):
+        self.zoom_level -= amount
+
+    def increase_zoom(self, amount=1):
+        self.zoom_level += amount
+
+    def reset_zoom(self):
+        self.zoom_level = 0
+
     @pyqtSlot()
     def on_zoom_changed(self):
         if self._image:
@@ -88,31 +98,37 @@ class DicomWidget(QtGui.QLabel):
         self.update_image()
 
     def update_image(self):
-        # Prepare image integer data
         if self._data:
+            # Prepare image integer data
             raw_data = self._data.get_slice(self.plane, self.slice)
             shape = raw_data.shape
-            data = (raw_data - self._low_hu) / self.w * 256
+            data = (raw_data - self._low_hu) / self.window_width * 256
             data[data < 0] = 0
             data[data > 255] = 255
-
-            self._image = QtGui.QImage(data, data.shape[1], data.shape[0], QtGui.QImage.Format_Indexed8)s
-            self.update_pixmap()
+            data = data.astype("int8")
+            self._image = QtGui.QImage(data, data.shape[1], data.shape[0], QtGui.QImage.Format_Indexed8)
+            self._image.setColorTable(self._color_table)
         else:
-            self.setText("No image.")
+            self._image = None
+        self.update_pixmap()
 
     def update_pixmap(self):
-        pixmap = QtGui.QPixmap.fromImage(self._image)
-        if self.zoom_factor != 1:
-            if self.zoom_factor < 1:
-                pixmap = self._pixmap.scaled(pixmap.width() * self.zoom_factor, pixmap.height() * self.zoom_factor,
-                                             QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
-            else:
-                pixmap = pixmap.scaled(pixmap.width() * self.zoom_factor, pixmap.height() * self.zoom_factor,
-                                       QtCore.Qt.KeepAspectRatio)
-        self._pixmap = pixmap
-        self.setPixmap(self._pixmap)
-        self.resize(pixmap.width(), pixmap.height())
+        if self._image:
+            pixmap = QtGui.QPixmap.fromImage(self._image)
+            if self.zoom_factor != 1:
+                if self.zoom_factor < 1:
+                    pixmap = self._pixmap.scaled(pixmap.width() * self.zoom_factor, pixmap.height() * self.zoom_factor,
+                                                 QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
+                else:
+                    pixmap = pixmap.scaled(pixmap.width() * self.zoom_factor, pixmap.height() * self.zoom_factor,
+                                           QtCore.Qt.KeepAspectRatio)
+            self._pixmap = pixmap
+            self.setPixmap(self._pixmap)
+            # self.setText("")
+            self.resize(pixmap.width(), pixmap.height())
+        else:
+            # self.setPixmap(None)
+            self.setText("No image.")
 
     @property
     def data(self):
@@ -125,20 +141,30 @@ class DicomWidget(QtGui.QLabel):
             self.data_changed.emit()
 
     @property
-    def c(self):
+    def window_center(self):
         return (self.high_hu + self.low_hu) / 2
 
-    @c.setter
-    def c(self, value):
-        if value != self.c:
-            original = self.c
+    @window_center.setter
+    def window_center(self, value):
+        if value != self.window_center:
+            original = self.window_center
             self._low_hu += value - original
             self._high_hu += value - original
             self.calibration_changed.emit()
 
     @property
-    def w(self):
-        return self.high_hu - self.low_hu
+    def window_width(self):
+        return self._high_hu - self._low_hu
+
+    @window_width.setter
+    def window_width(self, value):
+        if value < 0:
+            value = 0
+        original = self.window_width
+        if value != original:
+            self._low_hu -= (value - original) / 2
+            self._high_hu = self._low_hu + value
+            self.calibration_changed.emit()
 
     @property
     def plane(self):
@@ -163,13 +189,3 @@ class DicomWidget(QtGui.QLabel):
             self._slice = n
             self.slice_changed.emit()
             self.data_selection_changed.emit()
-
-    @w.setter
-    def w(self, value):
-        if value < 0:
-            value = 0
-        original = self.w
-        if value != original:
-            self._low_hu -= (value - original) / 2
-            self._high_hu = self._low_hu + value
-            self.calibration_changed.emit()

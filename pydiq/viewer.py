@@ -7,6 +7,9 @@ import numpy as np
 import glob
 import os.path
 
+from .dicom_data import DicomData
+from .dicom_widget import DicomWidget
+
 class TrackingLabel(QtGui.QLabel):
     def __init__(self, parent):
         QtGui.QLabel.__init__(self, parent)
@@ -26,8 +29,8 @@ class TrackingLabel(QtGui.QLabel):
         self.window.update_coordinates()
 
         if event.buttons() == QtCore.Qt.LeftButton:
-            self.window.w += event.y() - self.last_move_y
-            self.window.c += event.x() - self.last_move_x
+            self.window.window_width += event.y() - self.last_move_y
+            self.window.window_center += event.x() - self.last_move_x
 
             self.last_move_x = event.x()
             self.last_move_y = event.y()
@@ -67,9 +70,11 @@ class Viewer(QtGui.QMainWindow):
         self.high_hu = 2000
         self.low_hu = -1024
        
-        self.pix_label = TrackingLabel(self)
-        self.pix_label.setCursor(QtCore.Qt.CrossCursor)
-        self.color_table = [QtGui.qRgb(i, i, i) for i in range(256)]
+        # self.pix_label = TrackingLabel(self)
+        self.pix_label = DicomWidget(None)
+
+        # self.pix_label.setCursor(QtCore.Qt.CrossCursor)
+        # self.color_table = [QtGui.qRgb(i, i, i) for i in range(256)]
 
         scroll_area = QtGui.QScrollArea()
         scroll_area.setWidget(self.pix_label)
@@ -129,7 +134,7 @@ class Viewer(QtGui.QMainWindow):
             "PNG images (*.png)"
         )
         if file_name:
-            self._image.save(file_name)
+            self.pixmap_label._image.save(file_name)
 
     def build_menu(self): 
         self.file_menu = QtGui.QMenu('&File', self)
@@ -138,8 +143,9 @@ class Viewer(QtGui.QMainWindow):
         self.file_menu.addAction('&Quit', self.close, QtCore.Qt.CTRL + QtCore.Qt.Key_Q)      
 
         self.view_menu = QtGui.QMenu('&View', self)
-        self.view_menu.addAction('Zoom In', self.increase_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Plus)
-        self.view_menu.addAction('Zoom Out', self.decrease_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Minus)
+        self.view_menu.addAction('Zoom In', self.pix_label.increase_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Plus)
+        self.view_menu.addAction('Zoom Out', self.pix_label.decrease_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Minus)
+        self.view_menu.addAction('Zoom 1:1', self.pix_label.reset_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_0)
         fullscreen = QtGui.QAction('&Full Screen', self)
         fullscreen.setCheckable(True)
         fullscreen.setShortcut(QtCore.Qt.Key_F11)
@@ -186,49 +192,11 @@ class Viewer(QtGui.QMainWindow):
         if self.files:
             self.file_name = self.files[0]
 
-    def create_qimage(self, low_hu = -1024, high_hu = 2000):
-        data = (self.data - low_hu) / (high_hu - low_hu) * 256
-        data[data < 0] = 0
-        data[data > 255] = 255
-        data = data.astype(np.int8)
-
-        qimage = QtGui.QImage(data, data.shape[1], data.shape[0], QtGui.QImage.Format_Indexed8)
-        return qimage  
-
     def get_coordinates(self, i, j):
         x = self.image_position[0] + self.pixel_spacing[0] * i
         y = self.image_position[1] + self.pixel_spacing[1] * j
         z = self.image_position[2]
         return x, y, z
-
-    @property
-    def zoom_level(self):
-        """Zoom level.
-
-        An integer value useful for the GUI
-        0 = 1:1, positive values = zoom in, negative values = zoom out
-        """
-        return self._zoom_level
-
-    @property
-    def zoom_factor(self):
-        """Real size of data voxel in screen pixels."""
-        if self._zoom_level > 0:
-            return self._zoom_level + 1
-        else:
-            return 1.0 / (1 - self._zoom_level)
-
-    @zoom_level.setter
-    def zoom_level(self, value):
-        self._zoom_level = value
-        self.update_image()
-        self.update_coordinates()
-
-    def decrease_zoom(self):
-        self.zoom_level -= 1
-
-    def increase_zoom(self):
-        self.zoom_level += 1
 
     @property
     def mouse_ij(self):
@@ -262,85 +230,33 @@ class Viewer(QtGui.QMainWindow):
             self.hu_label.setText("No image")
         self.ij_label.setText("")
         self.x_label.setText("")
-        self.y_label.setText("")    
-
-    @property
-    def c(self):
-        return (self.high_hu + self.low_hu) / 2
-
-    @c.setter
-    def c(self, value):
-        original = self.c
-        self.low_hu = self.low_hu + (value - original)
-        self.high_hu = self.high_hu + (value - original)
-        self.update_cw()
-
-    @property
-    def w(self):
-        return self.high_hu - self.low_hu
-
-    @w.setter
-    def w(self, value):
-        if value < 0:
-            value = 0
-        original = self.w
-        self.low_hu = self.low_hu - (value - original) / 2
-        self.high_hu = self.low_hu + value
-        self.update_cw() 
+        self.y_label.setText("")
 
     def update_cw(self):
-        self.cw_label.setText("W: %d C: %d" % (int(self.w), int(self.c)))
-        self.update_image()
+        # self.cw_label.setText("W: %d C: %d" % (int(self.pix_label.w), int(self.pix_label.c)))
+        # self.update_image()
+        pass
 
     @property
     def file_name(self):
         return self._file_name
 
-    @property
-    def image(self):
-        try:
-            return self._image
-        except:
-            return None
-
-    def update_image(self):
-        self.image = self.create_qimage(self.low_hu, self.high_hu)
-
-    @image.setter
-    def image(self, value):
-        self._image = value
-        self._image.setColorTable(self.color_table)
-        pixmap = QtGui.QPixmap.fromImage(self._image)
-        if self.zoom_factor != 1:
-            if self.zoom_factor < 1:
-                pixmap = pixmap.scaled(pixmap.width() * self.zoom_factor,  pixmap.height() * self.zoom_factor, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
-            else:
-                pixmap = pixmap.scaled(pixmap.width() * self.zoom_factor,  pixmap.height() * self.zoom_factor, QtCore.Qt.KeepAspectRatio)
-        self.pix_label.setPixmap(pixmap)
-        self.pix_label.resize(pixmap.width(), pixmap.height())
-
     @file_name.setter
     def file_name(self, value):
-        self._file_name = value
         try:
-            self.file = dicom.read_file(self._file_name)
-            self.modality = self.file.Modality
-            if self.modality == "CT":
-                self.data = self.file.RescaleSlope * self.file.pixel_array + self.file.RescaleIntercept
-            else:
-                self.data = self.file.pixel_array
-            try:
-                self.image_position = np.array([float(t) for t in self.file.ImagePositionPatient])
-            except:
-                self.image_position = np.array([1., 1., 1.])
-            self.pixel_spacing = np.array([float(t) for t in self.file.PixelSpacing])
+            self._file_name = value
+            data = DicomData.from_files([self._file_name])
+            self.pix_label.data = data
             self.setWindowTitle("pydiq: " + self._file_name)
         except BaseException as exc:
             print exc
-            self.file = None
-            self.data = np.ndarray((0, 0), np.int8)
-            self.update_image()
+            self.pix_label.data = None
             self.setWindowTitle("pydiq: No image")
-        self.update_coordinates()
-        self.update_image()
+
+            # try:
+            #     self.image_position = np.array([float(t) for t in self.file.ImagePositionPatient])
+            # except:
+            #     self.image_position = np.array([1., 1., 1.])
+            # self.pixel_spacing = np.array([float(t) for t in self.file.PixelSpacing])
+
 
