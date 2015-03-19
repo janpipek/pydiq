@@ -1,11 +1,6 @@
 from __future__ import division
 
-try:
-    from PyQt4 import QtGui, QtCore
-    from PyQt4.QtCore import pyqtSignal
-except:
-    from PySide import QtGui, QtCore
-    from PySide.QtCore import Signal as pyqtSignal
+from ._qt import QtCore, QtGui, pyqtSignal, pyqtSlot
 
 class DicomWidget(QtGui.QLabel):
     """Widget for displaying DICOM data."""

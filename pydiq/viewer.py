@@ -1,9 +1,6 @@
 from __future__ import division
 
-try:
-    from PyQt4 import QtGui, QtCore
-except:
-    from PySide import QtGui, QtCore
+from ._qt import QtGui, QtCore
 
 import dicom
 import numpy as np
