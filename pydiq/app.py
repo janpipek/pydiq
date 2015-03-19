@@ -19,7 +19,7 @@ except:
 if error:
     sys.exit(-1)
 
-from viewer import Viewer
+from .viewer import Viewer
 
 def run_app():
     if len(sys.argv) < 2:
@@ -36,6 +36,3 @@ def run_app():
     viewer.show()
 
     sys.exit(app.exec_())
-
-if __name__ == "__main__":
-    run_app()
