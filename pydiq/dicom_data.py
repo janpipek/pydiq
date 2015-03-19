@@ -1,6 +1,12 @@
 import numpy as np
 import dicom
 
+# Anatomical planes
+TRANSVERSE = AXIAL = 0
+FRONTAL = CORONAL = 1
+MEDIAN = SAGITTAL = 2
+ALLOWED_PLANES = (AXIAL, CORONAL, SAGITTAL)
+
 class DicomData(object):
     ALLOWED_MODALITIES = ('CT', 'MRI', 'CR')
 
@@ -43,5 +49,18 @@ class DicomData(object):
     def array(self):
         """Numpy array."""
         return self._array
+
+    def get_slice(self, plane, n):
+        if plane not in ALLOWED_PLANES:
+            raise ValueError("Invalid plane identificator (allowed are 0,1,2)")
+        index = tuple((i == plane and n) or slice() for i in xrange(3))
+        return self._array[index]
+
+    def get_slice_shape(self, plane):
+        shape = list(self.shape)
+        shape.pop(plane)
+        return shape
+
+
 
 
