@@ -3,11 +3,11 @@ from __future__ import division
 from ._qt import QtCore, QtGui, pyqtSignal, pyqtSlot
 from . import dicom_data
 
+
 class DicomWidget(QtGui.QLabel):
     """Widget for displaying DICOM data.
 
     """
-
     def __init__(self, parent, **kwargs):
         # Qt initialization
         QtGui.QLabel.__init__(self, parent)
@@ -98,7 +98,7 @@ class DicomWidget(QtGui.QLabel):
         self.update_image()
 
     def update_image(self):
-        if self._data:
+        if self._data is not None:
             # Prepare image integer data
             raw_data = self._data.get_slice(self.plane, self.slice)
             shape = raw_data.shape
@@ -113,7 +113,7 @@ class DicomWidget(QtGui.QLabel):
         self.update_pixmap()
 
     def update_pixmap(self):
-        if self._image:
+        if self._image is not None:
             pixmap = QtGui.QPixmap.fromImage(self._image)
             if self.zoom_factor != 1:
                 if self.zoom_factor < 1:
@@ -124,10 +124,8 @@ class DicomWidget(QtGui.QLabel):
                                            QtCore.Qt.KeepAspectRatio)
             self._pixmap = pixmap
             self.setPixmap(self._pixmap)
-            # self.setText("")
             self.resize(pixmap.width(), pixmap.height())
         else:
-            # self.setPixmap(None)
             self.setText("No image.")
 
     @property
@@ -189,3 +187,10 @@ class DicomWidget(QtGui.QLabel):
             self._slice = n
             self.slice_changed.emit()
             self.data_selection_changed.emit()
+
+    @property
+    def slice_count(self):
+        if not self._data:
+            return 0
+        else:
+            return self._data.shape[self.plane]

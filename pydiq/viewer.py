@@ -10,6 +10,7 @@ import os.path
 from .dicom_data import DicomData
 from .dicom_widget import DicomWidget
 
+
 class TrackingLabel(QtGui.QLabel):
     def __init__(self, parent):
         QtGui.QLabel.__init__(self, parent)
@@ -60,6 +61,7 @@ class TrackingLabel(QtGui.QLabel):
             index = 0
 
         file_list.setCurrentItem(file_list.item(index))
+
 
 class Viewer(QtGui.QMainWindow):
     def __init__(self, path = None):
@@ -162,7 +164,7 @@ class Viewer(QtGui.QMainWindow):
     def show_structure(self):
         if self.file_name:
             f = dicom.read_file(self.file_name)
-            print str(f)
+            print(str(f))
 
     def toggle_full_screen(self, toggled):
         if toggled:
@@ -249,7 +251,7 @@ class Viewer(QtGui.QMainWindow):
             self.pix_label.data = data
             self.setWindowTitle("pydiq: " + self._file_name)
         except BaseException as exc:
-            print exc
+            print(exc)
             self.pix_label.data = None
             self.setWindowTitle("pydiq: No image")
 

@@ -9,12 +9,12 @@ except:
     try:
         from PySide import QtGui, QtCore
     except:
-        print "No Qt4 bindings found. Please install either PyQt4 or PySide."
+        print("No Qt4 bindings found. Please install either PyQt4 or PySide.")
         error = True
 try:
     import dicom
 except:
-    print "Package pydicom not found. Please install it using pip or from https://code.google.com/p/pydicom/."
+    print("Package pydicom not found. Please install it using pip or from https://code.google.com/p/pydicom/.")
     error = True
 if error:
     sys.exit(-1)

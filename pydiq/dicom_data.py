@@ -7,8 +7,9 @@ FRONTAL = CORONAL = 1
 MEDIAN = SAGITTAL = 2
 ALLOWED_PLANES = (AXIAL, CORONAL, SAGITTAL)
 
+
 class DicomData(object):
-    ALLOWED_MODALITIES = ('CT', 'MRI', 'CR')
+    ALLOWED_MODALITIES = ('CT', 'MR', 'CR', 'RT')
 
     def __init__(self, data, **kwargs):
         self._array = data
@@ -21,13 +22,14 @@ class DicomData(object):
 
         for file_path in files:
             f = dicom.read_file(file_path)
+            print("Reading %s..." % file_path)
 
             # Get modality
             if modality:
                 if modality != f.Modality:
                     raise StandardError("Cannot mix images from different modalities")
             elif f.Modality not in cls.ALLOWED_MODALITIES:
-                raise StandardError("%s modality not supported" % modality)
+                raise StandardError("%s modality not supported" % f.Modality)
             else:
                 modality = f.Modality
             data.append(cls._read_pixel_data(f))
@@ -47,7 +49,7 @@ class DicomData(object):
 
     @property
     def array(self):
-        """Numpy array."""
+        """The underlying numpy array."""
         return self._array
 
     def get_slice(self, plane, n):
@@ -58,6 +60,7 @@ class DicomData(object):
         return self._array[index]
 
     def get_slice_shape(self, plane):
+        # TODO: 
         shape = list(self.shape)
         shape.pop(plane)
         return shape
