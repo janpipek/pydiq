@@ -9,6 +9,7 @@ import os.path
 
 from .dicom_data import DicomData
 from .dicom_widget import DicomWidget
+from .utils import dicom_files_in_dir
 
 
 class TrackingLabel(QtGui.QLabel):
@@ -115,9 +116,9 @@ class Viewer(QtGui.QMainWindow):
         self.update_cw()
 
         if os.path.isfile(path):
-            self.load_files(path)
+            self.load_files([path])
         elif os.path.isdir(path):
-            self.load_files(os.path.join(path, "*.dcm"))
+            self.load_files(dicom_files_in_dir(path))
         self.build_menu()
 
     def open_directory(self):
@@ -126,7 +127,8 @@ class Viewer(QtGui.QMainWindow):
         dialog.setViewMode(QtGui.QFileDialog.List)
         dialog.setOption(QtGui.QFileDialog.ShowDirsOnly, True)
         if dialog.exec_():
-            self.load_files(os.path.join(str(dialog.selectedFiles()[0]), "*.dcm"))
+            directory = str(dialog.selectedFiles()[0])
+            self.load_files(dicom_files_in_dir(directory))
 
     def export_image(self):
         file_name = QtGui.QFileDialog.getSaveFileName(
@@ -180,12 +182,9 @@ class Viewer(QtGui.QMainWindow):
             # print item.text()
             self.file_name = str(item.toolTip())
 
-    def load_files(self, glob_string):
+    def load_files(self, files):
         self.file_list.clear()
-        if glob_string:
-            self.files = sorted(glob.glob(glob_string))
-        else:
-            self.files = ()
+        self.files = files
         for file_name in self.files:
             item = QtGui.QListWidgetItem(os.path.basename(file_name))
             item.setToolTip(file_name)

@@ -55,7 +55,7 @@ class DicomData(object):
     def get_slice(self, plane, n):
         if plane not in ALLOWED_PLANES:
             raise ValueError("Invalid plane identificator (allowed are 0,1,2)")
-        index = [slice(None, None, None) for i in xrange(3)]
+        index = [slice(None, None, None) for i in range(3)]
         index[plane] = n
         return self._array[index]
 
