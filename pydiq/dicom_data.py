@@ -1,5 +1,5 @@
 import numpy as np
-import dicom
+from .imports import pydicom
 
 # Anatomical planes
 TRANSVERSE = AXIAL = 0
@@ -21,7 +21,7 @@ class DicomData(object):
         modality = None
 
         for file_path in files:
-            f = dicom.read_file(file_path)
+            f = pydicom.read_file(file_path)
             print("Reading %s..." % file_path)
 
             # Get modality

@@ -1,9 +1,9 @@
-import dicom
+from .imports import pydicom
 import os
 
 
 def get_id(path):
-    f = dicom.read_file(path, stop_before_pixels=True)
+    f = pydicom.read_file(path, stop_before_pixels=True)
     return f.StudyInstanceUID, f.SeriesInstanceUID
 
 

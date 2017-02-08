@@ -4,7 +4,7 @@
 
 pydiq
 =====
-Simple open-source multi-platform DICOM browser/viewer in Python and Qt4.
+Simple open-source multi-platform DICOM browser/viewer in Python and Qt.
 
 ![Vertebrae](https://raw.githubusercontent.com/janpipek/pydiq/master/doc/vertebra.png "Vertebrae")
 
@@ -31,8 +31,9 @@ To Do
 Dependencies
 ------------
 
+* Python 3 / Python 2.7 (not tested)
 * qtpy (and therefore PyQt4 / PyQt5 / PySide)
-* pydicom
+* pydicom (0.9.9, maybe also 1.0)
 
 Tested on Linux and Windows.
 
