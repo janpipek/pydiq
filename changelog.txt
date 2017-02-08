@@ -1,0 +1,8 @@
+0.2.0 (8th Feb 2017)
+--------------------
+- Dependency: qtpy instead of custom PyQt4 / PySide solution
+- Display images even without .dcm extension
+
+0.1.x (2015-2016)
+-----------------
+- A simple monolithic application for viewing CT, MRI, and CR images.

@@ -31,7 +31,7 @@ To Do
 Dependencies
 ------------
 
-* PyQt4 / PySide
+* qtpy (and therefore PyQt4 / PyQt5 / PySide)
 * pydicom
 
 Tested on Linux and Windows.

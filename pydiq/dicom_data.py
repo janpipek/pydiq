@@ -27,9 +27,9 @@ class DicomData(object):
             # Get modality
             if modality:
                 if modality != f.Modality:
-                    raise StandardError("Cannot mix images from different modalities")
+                    raise RuntimeError("Cannot mix images from different modalities")
             elif f.Modality not in cls.ALLOWED_MODALITIES:
-                raise StandardError("%s modality not supported" % f.Modality)
+                raise RuntimeError("%s modality not supported" % f.Modality)
             else:
                 modality = f.Modality
             data.append(cls._read_pixel_data(f))

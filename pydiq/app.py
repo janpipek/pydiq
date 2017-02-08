@@ -3,14 +3,9 @@ import sys
 
 # Try imports and report missing packages.
 error = False
-try:
-    from PyQt4 import QtGui, QtCore
-except:
-    try:
-        from PySide import QtGui, QtCore
-    except:
-        print("No Qt4 bindings found. Please install either PyQt4 or PySide.")
-        error = True
+
+from qtpy import QtWidgets, QtCore
+
 try:
     import dicom
 except:
@@ -27,7 +22,7 @@ def run_app():
     else:
         path = sys.argv[1]
 
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
 
     QtCore.QCoreApplication.setApplicationName("pydiq")
     QtCore.QCoreApplication.setOrganizationName("Jan Pipek")

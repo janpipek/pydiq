@@ -1,16 +1,17 @@
 from __future__ import division
 
-from ._qt import QtCore, QtGui, pyqtSignal, pyqtSlot
+# from ._qt import QtCore, QtWidgets, Signal, pyqtSlot
+from qtpy import QtWidgets, QtCore, QtGui
 from . import dicom_data
 
 
-class DicomWidget(QtGui.QLabel):
+class DicomWidget(QtWidgets.QLabel):
     """Widget for displaying DICOM data.
 
     """
     def __init__(self, parent, **kwargs):
         # Qt initialization
-        QtGui.QLabel.__init__(self, parent)
+        QtWidgets.QLabel.__init__(self, parent)
         self.setCursor(QtCore.Qt.CrossCursor)
         self.setMouseTracking(True)
 
@@ -32,14 +33,14 @@ class DicomWidget(QtGui.QLabel):
 
         self.update_image()
 
-    data_changed = pyqtSignal()
-    zoom_changed = pyqtSignal()
-    calibration_changed = pyqtSignal()
+    data_changed = QtCore.Signal(name="data_changed")
+    zoom_changed = QtCore.Signal(name="zoom_changed")
+    calibration_changed = QtCore.Signal(name="calibration_changed")
 
     # == slice_changed OR plane_changed
-    data_selection_changed = pyqtSignal()
-    slice_changed = pyqtSignal()
-    plane_changed = pyqtSignal()
+    data_selection_changed = QtCore.Signal(name="data_selection_changed")
+    slice_changed = QtCore.Signal(name="slice_changed")
+    plane_changed = QtCore.Signal(name="plane_changed")
 
     def _auto_wire(self):
         """Wire all signals & slots that are necessary for the widget to work."""
@@ -80,20 +81,20 @@ class DicomWidget(QtGui.QLabel):
     def reset_zoom(self):
         self.zoom_level = 0
 
-    @pyqtSlot()
+    @QtCore.Slot()
     def on_zoom_changed(self):
         if self._image:
             self.update_image()
 
-    @pyqtSlot()
+    @QtCore.Slot()
     def on_data_changed(self):
         self.update_image()
 
-    @pyqtSlot()
+    @QtCore.Slot()
     def on_calibration_changed(self):
         self.update_image()
 
-    @pyqtSlot()
+    @QtCore.Slot()
     def on_data_selection_changed(self):
         self.update_image()
 

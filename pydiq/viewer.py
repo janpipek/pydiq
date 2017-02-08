@@ -1,10 +1,9 @@
 from __future__ import division
 
-from ._qt import QtGui, QtCore
+from qtpy import QtWidgets, QtCore
 
 import dicom
 import numpy as np
-import glob
 import os.path
 
 from .dicom_data import DicomData
@@ -12,9 +11,9 @@ from .dicom_widget import DicomWidget
 from .utils import dicom_files_in_dir
 
 
-class TrackingLabel(QtGui.QLabel):
+class TrackingLabel(QtWidgets.QLabel):
     def __init__(self, parent):
-        QtGui.QLabel.__init__(self, parent)
+        super(TrackingLabel, self).__init__(parent)
         self.setMouseTracking(True)
         self.last_move_x = None
         self.last_move_y = None
@@ -64,9 +63,9 @@ class TrackingLabel(QtGui.QLabel):
         file_list.setCurrentItem(file_list.item(index))
 
 
-class Viewer(QtGui.QMainWindow):
+class Viewer(QtWidgets.QMainWindow):
     def __init__(self, path = None):
-        QtGui.QMainWindow.__init__(self)
+        super(Viewer, self).__init__()
         self.setWindowTitle("pydiq - Python DICOM Viewer in Qt4")
         self.file = None
 
@@ -77,29 +76,29 @@ class Viewer(QtGui.QMainWindow):
         self.pix_label = DicomWidget(None)
 
         # self.pix_label.setCursor(QtCore.Qt.CrossCursor)
-        # self.color_table = [QtGui.qRgb(i, i, i) for i in range(256)]
+        # self.color_table = [QtWidgets.qRgb(i, i, i) for i in range(256)]
 
-        scroll_area = QtGui.QScrollArea()
+        scroll_area = QtWidgets.QScrollArea()
         scroll_area.setWidget(self.pix_label)
 
         # self.setCentralWidget(self.pix_label)
         self.setCentralWidget(scroll_area)
 
-        self.file_dock = QtGui.QDockWidget("Files", self)
+        self.file_dock = QtWidgets.QDockWidget("Files", self)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.file_dock)
 
-        self.file_list = QtGui.QListWidget()
+        self.file_list = QtWidgets.QListWidget()
         self.file_list.itemSelectionChanged.connect(self.on_file_item_change)
         self.file_dock.setWidget(self.file_list)
 
-        self.hu_label = QtGui.QLabel("No image")
-        self.c_label = QtGui.QLabel("")
-        self.cw_label = QtGui.QLabel("")        
-        self.x_label = QtGui.QLabel("")
-        self.y_label = QtGui.QLabel("")
-        self.z_label = QtGui.QLabel("")
+        self.hu_label = QtWidgets.QLabel("No image")
+        self.c_label = QtWidgets.QLabel("")
+        self.cw_label = QtWidgets.QLabel("")        
+        self.x_label = QtWidgets.QLabel("")
+        self.y_label = QtWidgets.QLabel("")
+        self.z_label = QtWidgets.QLabel("")
         self.use_fractional_coordinates = True
-        self.ij_label = QtGui.QLabel("")
+        self.ij_label = QtWidgets.QLabel("")
 
         self._zoom_level = 1
         self.mouse_x = -1
@@ -122,16 +121,16 @@ class Viewer(QtGui.QMainWindow):
         self.build_menu()
 
     def open_directory(self):
-        dialog = QtGui.QFileDialog(self)
-        dialog.setFileMode(QtGui.QFileDialog.DirectoryOnly)
-        dialog.setViewMode(QtGui.QFileDialog.List)
-        dialog.setOption(QtGui.QFileDialog.ShowDirsOnly, True)
+        dialog = QtWidgets.QFileDialog(self)
+        dialog.setFileMode(QtWidgets.QFileDialog.DirectoryOnly)
+        dialog.setViewMode(QtWidgets.QFileDialog.List)
+        dialog.setOption(QtWidgets.QFileDialog.ShowDirsOnly, True)
         if dialog.exec_():
             directory = str(dialog.selectedFiles()[0])
             self.load_files(dicom_files_in_dir(directory))
 
     def export_image(self):
-        file_name = QtGui.QFileDialog.getSaveFileName(
+        file_name = QtWidgets.QFileDialog.getSaveFileName(
             self,
             "Save file",
             os.path.expanduser("~/dicom-export.png"),
@@ -141,22 +140,22 @@ class Viewer(QtGui.QMainWindow):
             self.pixmap_label._image.save(file_name)
 
     def build_menu(self): 
-        self.file_menu = QtGui.QMenu('&File', self)
+        self.file_menu = QtWidgets.QMenu('&File', self)
         self.file_menu.addAction('&Open directory', self.open_directory, QtCore.Qt.CTRL + QtCore.Qt.Key_O)
         self.file_menu.addAction('&Export image', self.export_image, QtCore.Qt.CTRL + QtCore.Qt.Key_S)
         self.file_menu.addAction('&Quit', self.close, QtCore.Qt.CTRL + QtCore.Qt.Key_Q)      
 
-        self.view_menu = QtGui.QMenu('&View', self)
+        self.view_menu = QtWidgets.QMenu('&View', self)
         self.view_menu.addAction('Zoom In', self.pix_label.increase_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Plus)
         self.view_menu.addAction('Zoom Out', self.pix_label.decrease_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Minus)
         self.view_menu.addAction('Zoom 1:1', self.pix_label.reset_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_0)
-        fullscreen = QtGui.QAction('&Full Screen', self)
+        fullscreen = QtWidgets.QAction('&Full Screen', self)
         fullscreen.setCheckable(True)
         fullscreen.setShortcut(QtCore.Qt.Key_F11)
         fullscreen.toggled.connect(self.toggle_full_screen)
         self.view_menu.addAction(fullscreen)
 
-        self.tools_menu = QtGui.QMenu("&Tools", self)
+        self.tools_menu = QtWidgets.QMenu("&Tools", self)
         self.tools_menu.addAction('&Show DICOM structure', self.show_structure, QtCore.Qt.Key_F2)
 
         self.menuBar().addMenu(self.file_menu)
@@ -186,7 +185,7 @@ class Viewer(QtGui.QMainWindow):
         self.file_list.clear()
         self.files = files
         for file_name in self.files:
-            item = QtGui.QListWidgetItem(os.path.basename(file_name))
+            item = QtWidgets.QListWidgetItem(os.path.basename(file_name))
             item.setToolTip(file_name)
             self.file_list.addItem(item)
         self.file_list.setMinimumWidth(self.file_list.sizeHintForColumn(0) + 20)

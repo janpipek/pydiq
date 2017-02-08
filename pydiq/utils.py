@@ -1,5 +1,4 @@
 import dicom
-from collections import OrderedDict
 import os
 
 
@@ -17,6 +16,7 @@ def is_dicom_file(path):
             return f.read(132).decode("ASCII")[-4:] == "DICM"
     except:
         return False
+
 
 def dicom_files_in_dir(directory="."):
     """Full paths of all DICOM files in the directory."""
