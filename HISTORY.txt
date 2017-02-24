@@ -1,3 +1,7 @@
+0.2.1 (24th Feb 2017)
+---------------------
+- Dependency: works with dicom from pypi and perhaps should work in the future with pydicom (despite the confusing name change
+
 0.2.0 (8th Feb 2017)
 --------------------
 - Dependency: qtpy instead of custom PyQt4 / PySide solution
