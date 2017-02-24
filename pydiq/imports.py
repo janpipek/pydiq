@@ -9,9 +9,9 @@ except ImportError:
 # (the package changes name from dicom to pydicom)
 try:
     import pydicom
-except ImportError:
+except ImportError as e1:
     try:
         import dicom as pydicom
-    except:
+    except Exception as e:
         print("Cannot load package pydicom. Please install it to run pydiq.")
         exit(-1)

@@ -4,15 +4,11 @@ import sys
 # Try imports and report missing packages.
 error = False
 
-from qtpy import QtWidgets, QtCore
+# Just to check presence of essential libraries
+from . import imports
 
-try:
-    import dicom
-except:
-    print("Package pydicom not found. Please install it using pip or from https://code.google.com/p/pydicom/.")
-    error = True
-if error:
-    sys.exit(-1)
+from .imports import qtpy
+from qtpy import QtCore, QtWidgets
 
 from .viewer import Viewer
 
