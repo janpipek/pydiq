@@ -11,69 +11,17 @@ from .dicom_widget import DicomWidget
 from .utils import dicom_files_in_dir
 
 
-class TrackingLabel(QtWidgets.QLabel):
-    def __init__(self, parent):
-        super(TrackingLabel, self).__init__(parent)
-        self.setMouseTracking(True)
-        self.last_move_x = None
-        self.last_move_y = None
-        self.window = parent
-
-    def mouseLeaveEvent(self, event):
-        self.parent().mouse_x = -1
-        self.parent().mouse_y = -1
-        self.parent().update_coordinates()
-
-    def mouseMoveEvent(self, event):
-        self.window.mouse_x = event.x()
-        self.window.mouse_y = event.y()
-        self.window.update_coordinates()
-
-        if event.buttons() == QtCore.Qt.LeftButton:
-            self.window.window_width += event.y() - self.last_move_y
-            self.window.window_center += event.x() - self.last_move_x
-
-            self.last_move_x = event.x()
-            self.last_move_y = event.y()
-
-    def mousePressEvent(self, event):
-        self.last_move_x = event.x()
-        self.last_move_y = event.y()
-
-    def mouseReleaseEvent(self, event):
-        self.last_move_x = None
-        self.last_move_y = None
-
-    def wheelEvent(self, event):
-        file_list = self.window.file_list
-        if len(file_list.selectedItems()):
-            index = file_list.row(file_list.selectedItems()[0])
-        else:
-            index = -1
-        if event.delta() > 0:
-            index -= 1
-        else:
-            index += 1
-
-        if index >= file_list.count() or index == -2:
-            index = file_list.count() - 1
-        elif index < 0:
-            index = 0
-
-        file_list.setCurrentItem(file_list.item(index))
-
-
 class Viewer(QtWidgets.QMainWindow):
     def __init__(self, path = None):
         super(Viewer, self).__init__()
-        self.setWindowTitle("pydiq - Python DICOM Viewer in Qt4")
+        self.setWindowTitle("pydiq - Python DICOM Viewer in Qt")
         self.file = None
 
         self.high_hu = 2000
         self.low_hu = -1024
        
         # self.pix_label = TrackingLabel(self)
-        self.pix_label = DicomWidget(None)
+        self.pix_label = DicomWidget(self)
 
         # self.pix_label.setCursor(QtCore.Qt.CrossCursor)
         # self.color_table = [QtWidgets.qRgb(i, i, i) for i in range(256)]

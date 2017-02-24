@@ -5,13 +5,71 @@ from qtpy import QtWidgets, QtCore, QtGui
 from . import dicom_data
 
 
-class DicomWidget(QtWidgets.QLabel):
+class TrackingLabel(QtWidgets.QLabel):
+    def __init__(self, parent, **kwargs):
+        super(TrackingLabel, self).__init__(parent)
+        self.setMouseTracking(True)
+        self.last_move_x = None
+        self.last_move_y = None
+        self.window = parent
+
+    def mouseLeaveEvent(self, event):
+        self.parent().mouse_x = -1
+        self.parent().mouse_y = -1
+        self.parent().update_coordinates()
+
+    def mouseMoveEvent(self, event):
+        self.window.mouse_x = event.x()
+        self.window.mouse_y = event.y()
+        self.window.update_coordinates()
+
+        if event.buttons() == QtCore.Qt.LeftButton:
+            self.window_width += event.y() - self.last_move_y
+            self.window_center += event.x() - self.last_move_x
+
+            self.last_move_x = event.x()
+            self.last_move_y = event.y()
+
+    def mousePressEvent(self, event):
+        self.last_move_x = event.x()
+        self.last_move_y = event.y()
+
+    def mouseReleaseEvent(self, event):
+        self.last_move_x = None
+        self.last_move_y = None
+
+    def wheelEvent(self, event):
+        """
+
+        :param event:
+        :type event: QtGui.QWheelEvent
+        :return:
+        """
+        file_list = self.window.file_list
+        if len(file_list.selectedItems()):
+            index = file_list.row(file_list.selectedItems()[0])
+        else:
+            index = -1
+        if event.pixelDelta().y() > 0:
+            index -= 1
+        else:
+            index += 1
+
+        if index >= file_list.count() or index == -2:
+            index = file_list.count() - 1
+        elif index < 0:
+            index = 0
+
+        file_list.setCurrentItem(file_list.item(index))
+
+
+class DicomWidget(TrackingLabel):
     """Widget for displaying DICOM data.
 
     """
     def __init__(self, parent, **kwargs):
         # Qt initialization
-        QtWidgets.QLabel.__init__(self, parent)
+        super(DicomWidget, self).__init__(parent, **kwargs)
         self.setCursor(QtCore.Qt.CrossCursor)
         self.setMouseTracking(True)
 
@@ -141,7 +199,7 @@ class DicomWidget(QtWidgets.QLabel):
 
     @property
     def window_center(self):
-        return (self.high_hu + self.low_hu) / 2
+        return (self._high_hu + self._low_hu) / 2
 
     @window_center.setter
     def window_center(self, value):
