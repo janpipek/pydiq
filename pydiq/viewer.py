@@ -23,7 +23,6 @@ class Viewer(QtWidgets.QMainWindow):
         # self.pix_label = TrackingLabel(self)
         self.pix_label = DicomWidget(self)
 
-        # self.pix_label.setCursor(QtCore.Qt.CrossCursor)
         # self.color_table = [QtWidgets.qRgb(i, i, i) for i in range(256)]
 
         scroll_area = QtWidgets.QScrollArea()
@@ -78,14 +77,14 @@ class Viewer(QtWidgets.QMainWindow):
             self.load_files(dicom_files_in_dir(directory))
 
     def export_image(self):
-        file_name = QtWidgets.QFileDialog.getSaveFileName(
+        file_name, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
             "Save file",
             os.path.expanduser("~/dicom-export.png"),
             "PNG images (*.png)"
         )
         if file_name:
-            self.pixmap_label._image.save(file_name)
+            self.pix_label._image.save(file_name)
 
     def build_menu(self): 
         self.file_menu = QtWidgets.QMenu('&File', self)
@@ -162,7 +161,7 @@ class Viewer(QtWidgets.QMainWindow):
             return self.get_coordinates(self.mouse_x // self.zoom_factor, self.mouse_y // self.zoom_factor)
 
     def update_coordinates(self):
-        if self.file:
+        if self.pix_label.data:
             x, y, z = self.mouse_xyz
             i, j = self.mouse_ij
             self.z_label.setText("z: %.2f" % z)
