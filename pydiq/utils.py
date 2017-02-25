@@ -8,7 +8,10 @@ def get_id(path):
 
 
 def is_dicom_file(path):
-    """Fast way to check whether file is DICOM."""
+    """Fast way to check whether file is DICOM.
+
+    :rtype: bool
+    """
     if not os.path.isfile(path):
         return False
     try:
@@ -19,7 +22,10 @@ def is_dicom_file(path):
 
 
 def dicom_files_in_dir(directory="."):
-    """Full paths of all DICOM files in the directory."""
+    """Full paths of all DICOM files in the directory.
+
+    :rtype: list (str)
+    """
     directory = os.path.expanduser(directory)
     candidates = [os.path.join(directory, f) for f in sorted(os.listdir(directory))]
     return [f for f in candidates if is_dicom_file(f)]
