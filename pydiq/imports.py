@@ -1,3 +1,11 @@
+"""Module to deal with all dependencies"""
+try:
+    import numpy
+except ImportError:
+    print("Cannot load package numpy. Please install it to run pydiq.")
+    exit(-1)
+
+
 try:
     import qtpy
 except ImportError:

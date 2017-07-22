@@ -20,7 +20,7 @@ class FileSet(object):
         return self._files
 
     def _parse_tree(self):
-        self._studies = { }
+        self._studies = {}
 
         for f in self.files:
             series = Series.from_file(f)
@@ -149,4 +149,3 @@ class File(object):
     @property
     def series_instance_uid(self):
         return _MetaBase.safe(self, "SeriesInstanceUID")
-

@@ -1,6 +1,5 @@
 from __future__ import division
 
-# from ._qt import QtCore, QtWidgets, Signal, pyqtSlot
 from qtpy import QtWidgets, QtCore, QtGui
 from . import dicom_data
 
@@ -14,11 +13,17 @@ class TrackingLabel(QtWidgets.QLabel):
         self.window = parent
 
     def mouseLeaveEvent(self, event):
+        """
+        :type event: QtGui.QMouseEvent
+        """
         self.parent().mouse_x = -1
         self.parent().mouse_y = -1
         self.parent().update_coordinates()
 
     def mouseMoveEvent(self, event):
+        """
+        :type event: QtGui.QMouseEvent
+        """
         self.window.mouse_x = event.x()
         self.window.mouse_y = event.y()
         self.window.update_coordinates()
@@ -31,19 +36,22 @@ class TrackingLabel(QtWidgets.QLabel):
             self.last_move_y = event.y()
 
     def mousePressEvent(self, event):
+        """
+        :type event: QtGui.QMouseEvent
+        """
         self.last_move_x = event.x()
         self.last_move_y = event.y()
 
     def mouseReleaseEvent(self, event):
+        """
+        :type event: QtGui.QMouseEvent
+        """
         self.last_move_x = None
         self.last_move_y = None
 
     def wheelEvent(self, event):
         """
-
-        :param event:
         :type event: QtGui.QWheelEvent
-        :return:
         """
         file_list = self.window.file_list
         if len(file_list.selectedItems()):
@@ -108,8 +116,30 @@ class DicomWidget(TrackingLabel):
         self.plane_changed.connect(self.on_data_selection_changed)
 
     @property
+    def mouse_xyz(self):
+        pass
+
+    @property
+    def mouse_ij(self):
+        pass
+
+    def get_coordinates(self, i, j):
+        """
+
+        :type i: float
+        :type j: float
+        :return: tuple(float)
+        """
+        x = self.data.image_position[0] + self.pixel_spacing[0] * i
+        y = self.image_position[1] + self.pixel_spacing[1] * j
+        z = self.image_position[2]
+        return x, y, z
+
+    @property
     def zoom_level(self):
         """Zoom level.
+
+        :rtype: int
 
         An integer value useful for the GUI
         0 = 1:1, positive values = zoom in, negative values = zoom out
@@ -118,7 +148,10 @@ class DicomWidget(TrackingLabel):
 
     @property
     def zoom_factor(self):
-        """Real size of data voxel in screen pixels."""
+        """Real size of data voxel in screen pixels.
+
+        :rtype: float
+        """
         if self._zoom_level > 0:
             return self._zoom_level + 1
         else:
@@ -189,16 +222,25 @@ class DicomWidget(TrackingLabel):
 
     @property
     def data(self):
+        """
+        :rtype: dicom_data.DicomData
+        """
         return self._data
 
     @data.setter
     def data(self, d):
+        """
+        :type d: dicom_data.DicomData
+        """
         if self._data != d:
             self._data = d
             self.data_changed.emit()
 
     @property
     def window_center(self):
+        """
+        :rtype: float
+        """
         return (self._high_hu + self._low_hu) / 2
 
     @window_center.setter
@@ -211,6 +253,9 @@ class DicomWidget(TrackingLabel):
 
     @property
     def window_width(self):
+        """
+        :rtype: float
+        """
         return self._high_hu - self._low_hu
 
     @window_width.setter

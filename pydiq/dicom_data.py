@@ -1,11 +1,13 @@
 import numpy as np
 from .imports import pydicom
 
+
 # Anatomical planes
 TRANSVERSE = AXIAL = 0
 FRONTAL = CORONAL = 1
 MEDIAN = SAGITTAL = 2
 ALLOWED_PLANES = (AXIAL, CORONAL, SAGITTAL)
+
 
 
 class DicomData(object):
@@ -17,6 +19,10 @@ class DicomData(object):
 
     @classmethod
     def from_files(cls, files):
+        """
+        :type files: list (str)
+        :rtype: DicomData
+        """
         data = []
         modality = None
 
@@ -37,6 +43,9 @@ class DicomData(object):
 
     @classmethod
     def _read_pixel_data(cls, f):
+        """
+        :rtype: np.ndarray
+        """
         if f.Modality == "CT":
             data = f.RescaleSlope * f.pixel_array + f.RescaleIntercept
             return np.array(data)
@@ -45,11 +54,17 @@ class DicomData(object):
 
     @property
     def shape(self):
+        """
+        :rtype: tuple
+        """
         return self._array.shape
 
     @property
     def array(self):
-        """The underlying numpy array."""
+        """The underlying numpy array.
+
+        :rtype: np.ndarray
+        """
         return self._array
 
     def get_slice(self, plane, n):

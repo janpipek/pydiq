@@ -1,8 +1,4 @@
 #!/usr/bin/env python
-import sys
-
-# Try imports and report missing packages.
-error = False
 
 # Just to check presence of essential libraries
 from . import imports
@@ -13,6 +9,7 @@ from qtpy import QtCore, QtWidgets
 from .viewer import Viewer
 
 def run_app():
+    import sys
     if len(sys.argv) < 2:
         path = "."
     else:
@@ -27,3 +24,4 @@ def run_app():
     viewer.show()
 
     sys.exit(app.exec_())
+

@@ -31,12 +31,19 @@ class Viewer(QtWidgets.QMainWindow):
         # self.setCentralWidget(self.pix_label)
         self.setCentralWidget(scroll_area)
 
-        self.file_dock = QtWidgets.QDockWidget("Files", self)
+        self.series_dock = QtWidgets.QDockWidget("Series", self)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.series_dock)
+
+        self.file_dock = QtWidgets.QDockWidget("Images", self)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.file_dock)
 
         self.file_list = QtWidgets.QListWidget()
         self.file_list.itemSelectionChanged.connect(self.on_file_item_change)
         self.file_dock.setWidget(self.file_list)
+
+        self.series_list = QtWidgets.QListWidget()
+        # self.studies_list.itemSelectionChanged.connect(self.on_study_item_change)
+        self.series_dock.setWidget(self.series_list)
 
         self.hu_label = QtWidgets.QLabel("No image")
         self.c_label = QtWidgets.QLabel("")
@@ -112,7 +119,9 @@ class Viewer(QtWidgets.QMainWindow):
     def show_structure(self):
         if self.file_name:
             f = dicom.read_file(self.file_name)
-            print(str(f))
+            l = QtWidgets.QLabel(str(f))
+            l.show()
+            # print(str(f))
 
     def toggle_full_screen(self, toggled):
         if toggled:
@@ -129,6 +138,15 @@ class Viewer(QtWidgets.QMainWindow):
             self.file_name = str(item.toolTip())
 
     def load_files(self, files):
+        """
+
+        :type files: list(str)
+        :return:
+        """
+        self.series_list.clear()
+        self.series = {}
+
+
         self.file_list.clear()
         self.files = files
         for file_name in self.files:
@@ -138,6 +156,7 @@ class Viewer(QtWidgets.QMainWindow):
         self.file_list.setMinimumWidth(self.file_list.sizeHintForColumn(0) + 20)
         if self.files:
             self.file_name = self.files[0]
+
 
     def get_coordinates(self, i, j):
         x = self.image_position[0] + self.pixel_spacing[0] * i
@@ -161,7 +180,7 @@ class Viewer(QtWidgets.QMainWindow):
             return self.get_coordinates(self.mouse_x // self.zoom_factor, self.mouse_y // self.zoom_factor)
 
     def update_coordinates(self):
-        if self.pix_label.data:
+        if self.pix_label.data and False:
             x, y, z = self.mouse_xyz
             i, j = self.mouse_ij
             self.z_label.setText("z: %.2f" % z)
