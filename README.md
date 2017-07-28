@@ -32,7 +32,7 @@ Dependencies
 ------------
 
 * Python 3 / Python 2.7 (not tested)
-* qtpy (and therefore PyQt4 / PyQt5 / PySide)
+* qtpy (and therefore PyQt4 / PyQt5 / PySide - not automatically installed by pip!)
 * pydicom (0.9.9, maybe also 1.0)
 
 Tested on Linux and Windows.
