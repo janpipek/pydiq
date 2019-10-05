@@ -6,7 +6,7 @@ pydiq
 =====
 Simple open-source multi-platform DICOM browser/viewer in Python and Qt.
 
-**NOTE** This project has not been updated for a long time. Currently, I have no capacity to improve it. If you feel like contributing, I'll be happy to accept your enhancements / bug fixes.
+**NOTE** This project has not been updated for a long time. Currently, I have no capacity to improve it. If you feel like contributing, I'll be happy to accept your enhancements / bug fixes. The UI seems not to be entirely working...
 
 ![Vertebrae](https://raw.githubusercontent.com/janpipek/pydiq/master/doc/vertebra.png "Vertebrae")
 

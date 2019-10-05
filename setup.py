@@ -7,6 +7,7 @@ setup(
     packages=find_packages(),
     license='MIT',
     description='Simple open-source DICOM browser/viewer in Python and Qt4.',
+    long_description_content_type='text/markdown',
     long_description=open('README.md').read(),
     author='Jan Pipek',
     author_email='jan.pipek@gmail.com',
