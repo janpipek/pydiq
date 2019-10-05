@@ -33,9 +33,9 @@ To Do
 Dependencies
 ------------
 
-* Python 3 / Python 2.7 (not tested)
+* Python 3.6+
 * qtpy (and therefore PyQt4 / PyQt5 / PySide - not automatically installed by pip!)
-* pydicom (0.9.9, maybe also 1.0)
+* pydicom (1.3)
 
 Tested on Linux and Windows.
 
@@ -43,9 +43,17 @@ Installation
 ------------
 The easiest way is `pip install pydiq`.
 
+Usage
+-----
+```
+Usage: pydiq [OPTIONS] [PATH]
+
+Options:
+  --help  Show this message and exit.
+```
+
 Limitations
 -----------
-
 Currently, the viewer supports only Computed Radiography (CR), Computed Tomography (CT) and
 Magnetic Resonance Imaging (MRI) images with normal orientation (x, y, z)
 in one-slice-per-file format.
