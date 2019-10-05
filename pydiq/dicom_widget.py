@@ -1,5 +1,8 @@
+from typing import Tuple
+
 from qtpy import QtWidgets, QtCore, QtGui
-from . import dicom_data
+
+from pydiq.dicom_data import DicomData, AXIAL, ALLOWED_PLANES
 
 
 class TrackingLabel(QtWidgets.QLabel):
@@ -70,7 +73,7 @@ class DicomWidget(TrackingLabel):
         self._scaled_image = None
         self._low_hu = kwargs.get("low_hu", -1000)
         self._high_hu = kwargs.get("high_hu", 3000)
-        self._plane = kwargs.get("plane", dicom_data.AXIAL)
+        self._plane = kwargs.get("plane", AXIAL)
         self._slice = kwargs.get("slice", 0)
         self._color_table = kwargs.get("color_table", [QtGui.qRgb(i, i, i) for i in range(256)])
 
@@ -106,23 +109,15 @@ class DicomWidget(TrackingLabel):
     def mouse_ij(self):
         pass
 
-    def get_coordinates(self, i, j):
-        """
-
-        :type i: float
-        :type j: float
-        :return: tuple(float)
-        """
+    def get_coordinates(self, i: float, j: float) -> Tuple[float, float, float]:
         x = self.data.image_position[0] + self.pixel_spacing[0] * i
         y = self.image_position[1] + self.pixel_spacing[1] * j
         z = self.image_position[2]
         return x, y, z
 
     @property
-    def zoom_level(self):
+    def zoom_level(self) -> int:
         """Zoom level.
-
-        :rtype: int
 
         An integer value useful for the GUI
         0 = 1:1, positive values = zoom in, negative values = zoom out
@@ -130,11 +125,8 @@ class DicomWidget(TrackingLabel):
         return self._zoom_level
 
     @property
-    def zoom_factor(self):
-        """Real size of data voxel in screen pixels.
-
-        :rtype: float
-        """
+    def zoom_factor(self) -> float:
+        """Real size of data voxel in screen pixels."""
         if self._zoom_level > 0:
             return self._zoom_level + 1
         else:
@@ -204,26 +196,17 @@ class DicomWidget(TrackingLabel):
             self.setText("No image.")
 
     @property
-    def data(self):
-        """
-        :rtype: dicom_data.DicomData
-        """
+    def data(self) -> DicomData:
         return self._data
 
     @data.setter
-    def data(self, d):
-        """
-        :type d: dicom_data.DicomData
-        """
+    def data(self, d: DicomData):
         if self._data != d:
             self._data = d
             self.data_changed.emit()
 
     @property
-    def window_center(self):
-        """
-        :rtype: float
-        """
+    def window_center(self) -> float:
         return (self._high_hu + self._low_hu) / 2
 
     @window_center.setter
@@ -235,14 +218,11 @@ class DicomWidget(TrackingLabel):
             self.calibration_changed.emit()
 
     @property
-    def window_width(self):
-        """
-        :rtype: float
-        """
+    def window_width(self) -> float:
         return self._high_hu - self._low_hu
 
     @window_width.setter
-    def window_width(self, value):
+    def window_width(self, value: float):
         if value < 0:
             value = 0
         original = self.window_width
@@ -252,31 +232,31 @@ class DicomWidget(TrackingLabel):
             self.calibration_changed.emit()
 
     @property
-    def plane(self):
+    def plane(self) -> int:
         return self._plane
 
     @plane.setter
-    def plane(self, value):
+    def plane(self, value: int):
         if value != self._plane:
-            if value not in [dicom_data.ALLOWED_PLANES]:
+            if value not in [ALLOWED_PLANES]:
                 raise ValueError("Invalid plane identificator")
             self._plane = value
             self.plane_changed.emit()
             self.data_selection_changed.emit()
 
     @property
-    def slice(self):
+    def slice(self) -> int:
         return self._slice
 
     @slice.setter
-    def slice(self, n):
+    def slice(self, n: int):
         if n != self._slice:
             self._slice = n
             self.slice_changed.emit()
             self.data_selection_changed.emit()
 
     @property
-    def slice_count(self):
+    def slice_count(self) -> int:
         if not self._data:
             return 0
         else:

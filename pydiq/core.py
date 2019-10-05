@@ -118,29 +118,30 @@ class Series(_MetaBase):
             study_instance_uid=g("StudyInstanceUID")
         )
 
-    def add_file(self, f):
+    def add_file(self, f: "File"):
         self.files[f.path] = f
 
     def __str__(self):
         return "Series(\"{0}\", \"{1}\", {2} files)".format(self.instance_uid, self.description, len(self.files))
 
     def __iter__(self):
-        return self.files.values()
+        return iter(self.files.values())
 
 
 class File:
-    def __init__(self, path):
+    def __init__(self, path: str):
         self.path = path
         self._data = None
 
     @property
     def data(self):
+        """Lazy evaluated DICOM file data."""
         if not self._data:
             self._data = read_file(self.path)
         return self._data
 
     def __str__(self):
-        return "File(\"0\")".format(self.path)
+        return f"File({self.path})".format(self.path)
 
     @property
     def study_instance_uid(self):
