@@ -1,6 +1,6 @@
-from .dicom_data import  DicomData
-from .dicom_widget import DicomWidget
-from .viewer import Viewer
-from . import utils
+from pydiq.dicom_data import  DicomData
+from pydiq.dicom_widget import DicomWidget
+from pydiq.viewer import Viewer
+from pydiq.app import run_app
 
-from .app import run_app
+from . import utils

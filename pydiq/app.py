@@ -1,12 +1,8 @@
 #!/usr/bin/env python
-
-# Just to check presence of essential libraries
-from . import imports
-
-from .imports import qtpy
 from qtpy import QtCore, QtWidgets
 
-from .viewer import Viewer
+from pydiq.viewer import Viewer
+
 
 def run_app():
     import sys

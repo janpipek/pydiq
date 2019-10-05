@@ -11,7 +11,8 @@ setup(
     author='Jan Pipek',
     author_email='jan.pipek@gmail.com',
     url='https://github.com/janpipek/pydiq',
-    install_requires = [ 'qtpy', 'pydicom' ],
+    install_requires=['qtpy', 'pydicom'],
+    python_requires='>=3.6',
     entry_points = {
         'console_scripts' : [
             'pydiq = pydiq:run_app'

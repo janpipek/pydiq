@@ -1,5 +1,3 @@
-from __future__ import division
-
 from qtpy import QtWidgets, QtCore, QtGui
 from . import dicom_data
 
@@ -12,18 +10,12 @@ class TrackingLabel(QtWidgets.QLabel):
         self.last_move_y = None
         self.window = parent
 
-    def mouseLeaveEvent(self, event):
-        """
-        :type event: QtGui.QMouseEvent
-        """
+    def mouseLeaveEvent(self, event: QtGui.QMouseEvent):
         self.parent().mouse_x = -1
         self.parent().mouse_y = -1
         self.parent().update_coordinates()
 
-    def mouseMoveEvent(self, event):
-        """
-        :type event: QtGui.QMouseEvent
-        """
+    def mouseMoveEvent(self, event: QtGui.QMouseEvent):
         self.window.mouse_x = event.x()
         self.window.mouse_y = event.y()
         self.window.update_coordinates()
@@ -35,24 +27,15 @@ class TrackingLabel(QtWidgets.QLabel):
             self.last_move_x = event.x()
             self.last_move_y = event.y()
 
-    def mousePressEvent(self, event):
-        """
-        :type event: QtGui.QMouseEvent
-        """
+    def mousePressEvent(self, event: QtGui.QMouseEvent):
         self.last_move_x = event.x()
         self.last_move_y = event.y()
 
-    def mouseReleaseEvent(self, event):
-        """
-        :type event: QtGui.QMouseEvent
-        """
+    def mouseReleaseEvent(self, event: QtGui.QMouseEvent):
         self.last_move_x = None
         self.last_move_y = None
 
-    def wheelEvent(self, event):
-        """
-        :type event: QtGui.QWheelEvent
-        """
+    def wheelEvent(self, event: QtGui.QWheelEvent):
         file_list = self.window.file_list
         if len(file_list.selectedItems()):
             index = file_list.row(file_list.selectedItems()[0])

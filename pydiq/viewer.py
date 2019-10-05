@@ -1,14 +1,15 @@
-from __future__ import division
+import os
+from typing import List, Optional
 
 from qtpy import QtWidgets, QtCore
 
-import dicom
+import pydicom
 import numpy as np
-import os.path
 
-from .dicom_data import DicomData
-from .dicom_widget import DicomWidget
-from .utils import dicom_files_in_dir
+
+from pydiq.dicom_data import DicomData
+from pydiq.dicom_widget import DicomWidget
+from pydiq.utils import dicom_files_in_dir
 
 
 class Viewer(QtWidgets.QMainWindow):
@@ -16,6 +17,7 @@ class Viewer(QtWidgets.QMainWindow):
         super(Viewer, self).__init__()
         self.setWindowTitle("pydiq - Python DICOM Viewer in Qt")
         self.file = None
+        self._file_name = None
 
         self.high_hu = 2000
         self.low_hu = -1024
@@ -118,7 +120,7 @@ class Viewer(QtWidgets.QMainWindow):
 
     def show_structure(self):
         if self.file_name:
-            f = dicom.read_file(self.file_name)
+            f = pydicom.read_file(self.file_name)
             l = QtWidgets.QLabel(str(f))
             l.show()
             # print(str(f))
@@ -137,12 +139,7 @@ class Viewer(QtWidgets.QMainWindow):
             # print item.text()
             self.file_name = str(item.toolTip())
 
-    def load_files(self, files):
-        """
-
-        :type files: list(str)
-        :return:
-        """
+    def load_files(self, files: List[str]):
         self.series_list.clear()
         self.series = {}
 

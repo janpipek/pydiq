@@ -1,7 +1,7 @@
 from dicom.filereader import read_file
 
 
-class FileSet(object):
+class FileSet:
     def __init__(self, filenames):
         self.filenames = filenames
         self._files = None
@@ -40,7 +40,7 @@ class FileSet(object):
         return iter(self.studies.values())
 
 
-class _MetaBase(object):
+class _MetaBase:
     def __init__(self, instance_uid):
         self.instance_uid = instance_uid
 
@@ -128,7 +128,7 @@ class Series(_MetaBase):
         return self.files.values()
 
 
-class File(object):
+class File:
     def __init__(self, path):
         self.path = path
         self._data = None

@@ -1,6 +1,8 @@
 0.2.2 (4th Oct 2019)
 --------------------
 - Dependency: Require `pydicom` instead of `dicom` (i.e. the 1.x.x version)
+- Dependency: Require Python 3.6
+- Refactoring
 
 0.2.1 (24th Feb 2017)
 ---------------------
