@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pydiq',
-    version='0.2.1',
+    version='0.2.2',
     packages=find_packages(),
     license='MIT',
     description='Simple open-source DICOM browser/viewer in Python and Qt4.',
@@ -11,7 +11,7 @@ setup(
     author='Jan Pipek',
     author_email='jan.pipek@gmail.com',
     url='https://github.com/janpipek/pydiq',
-    install_requires = [ 'qtpy', 'dicom' ],
+    install_requires = [ 'qtpy', 'pydicom' ],
     entry_points = {
         'console_scripts' : [
             'pydiq = pydiq:run_app'

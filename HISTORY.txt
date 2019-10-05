@@ -1,3 +1,7 @@
+0.2.2 (4th Oct 2019)
+--------------------
+- Dependency: Require `pydicom` instead of `dicom` (i.e. the 1.x.x version)
+
 0.2.1 (24th Feb 2017)
 ---------------------
 - Dependency: works with dicom from pypi and perhaps should work in the future with pydicom (despite the confusing name change
