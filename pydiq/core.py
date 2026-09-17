@@ -1,4 +1,4 @@
-from dicom.filereader import read_file
+from pydicom import dcmread
 
 
 class FileSet:
@@ -137,7 +137,7 @@ class File:
     def data(self):
         """Lazy evaluated DICOM file data."""
         if not self._data:
-            self._data = read_file(self.path)
+            self._data = dcmread(self.path)
         return self._data
 
     def __str__(self):

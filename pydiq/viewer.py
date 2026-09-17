@@ -120,7 +120,7 @@ class Viewer(QtWidgets.QMainWindow):
 
     def show_structure(self):
         if self.file_name:
-            f = pydicom.read_file(self.file_name)
+            f = pydicom.dcmread(self.file_name)
             l = QtWidgets.QLabel(str(f))
             l.show()
             # print(str(f))

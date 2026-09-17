@@ -3,4 +3,4 @@ MANIFEST
 *.egg-info
 build/
 dist/
-.idea/
+.idea/.venv/

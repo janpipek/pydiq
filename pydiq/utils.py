@@ -5,7 +5,7 @@ import pydicom
 
 
 def get_id(path: str) -> Tuple[str, str]:
-    f = pydicom.read_file(path, stop_before_pixels=True)
+    f = pydicom.dcmread(path, stop_before_pixels=True)
     return f.StudyInstanceUID, f.SeriesInstanceUID
 
 

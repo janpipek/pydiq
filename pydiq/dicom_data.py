@@ -25,7 +25,7 @@ class DicomData:
         modality = None
 
         for file_path in files:
-            f = pydicom.read_file(file_path)
+            f = pydicom.dcmread(file_path)
             print(f"Reading {file_path}...")
 
             # Get modality
