@@ -39,8 +39,11 @@ class Viewer(QtWidgets.QMainWindow):
         self.series_dock = QtWidgets.QDockWidget("Series", self)
         self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.series_dock)
 
-        self.file_dock = QtWidgets.QDockWidget("Images", self)
+        self.file_dock = QtWidgets.QDockWidget("Files", self)
         self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.file_dock)
+
+        self.image_dock = QtWidgets.QDockWidget("Images", self)
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.image_dock)
 
         self.file_list = QtWidgets.QListWidget()
         self.file_list.itemSelectionChanged.connect(self.on_file_item_change)
@@ -49,6 +52,11 @@ class Viewer(QtWidgets.QMainWindow):
         self.series_list = QtWidgets.QListWidget()
         # self.studies_list.itemSelectionChanged.connect(self.on_study_item_change)
         self.series_dock.setWidget(self.series_list)
+
+        # The images of the selected file - one for all but multi-frame files
+        self.image_list = QtWidgets.QListWidget()
+        self.image_list.itemSelectionChanged.connect(self.on_image_item_change)
+        self.image_dock.setWidget(self.image_list)
 
         self.name_label = QtWidgets.QLabel("")
         self.hu_label = QtWidgets.QLabel("No image")
@@ -75,7 +83,11 @@ class Viewer(QtWidgets.QMainWindow):
         self.pix_label.calibration_changed.connect(self.update_cw)
         self.pix_label.data_changed.connect(self.update_coordinates)
         self.pix_label.data_selection_changed.connect(self.update_coordinates)
+        self.pix_label.data_changed.connect(self.update_image_list)
+        self.pix_label.plane_changed.connect(self.update_image_list)
+        self.pix_label.slice_changed.connect(self.select_current_image)
         self.update_cw()
+        self.update_image_list()
 
         if os.path.isfile(path):
             self.load_files([path])
@@ -165,6 +177,31 @@ class Viewer(QtWidgets.QMainWindow):
             item = self.file_list.selectedItems()[0]
             self.file_name = str(item.toolTip())
 
+    def on_image_item_change(self) -> None:
+        items = self.image_list.selectedItems()
+        if items:
+            self.pix_label.slice = self.image_list.row(items[0])
+
+    @QtCore.Slot()
+    def update_image_list(self) -> None:
+        """List the images the current file offers to show."""
+        # The list only mirrors the widget, so its own signals say nothing new
+        self.image_list.blockSignals(True)
+        self.image_list.clear()
+        for index in range(self.pix_label.slice_count):
+            self.image_list.addItem(f"Image {index + 1}")
+        self.image_list.blockSignals(False)
+        self.select_current_image()
+
+    @QtCore.Slot()
+    def select_current_image(self) -> None:
+        """Point the image list at the image that is actually shown."""
+        if self.image_list.currentRow() == self.pix_label.slice:
+            return
+        self.image_list.blockSignals(True)
+        self.image_list.setCurrentRow(self.pix_label.slice)
+        self.image_list.blockSignals(False)
+
     def load_files(self, files: list[str]) -> None:
         self.series_list.clear()
         self.series: dict[str, Any] = {}
@@ -250,17 +287,24 @@ class Viewer(QtWidgets.QMainWindow):
         i, j = int(position[0]), int(position[1])
         slice_data = data.get_slice(self.pix_label.plane, self.pix_label.slice)
         x, y, z = self.coordinates_of(position)
-        self.x_label.setText(f"x: {x:.2f}")
-        self.y_label.setText(f"y: {y:.2f}")
-        self.z_label.setText(f"z: {z:.2f}")
+        # Without a physical size, a position in mm would be made up
+        self.x_label.setText(f"x: {x:.2f}" if data.has_pixel_spacing else "")
+        self.y_label.setText(f"y: {y:.2f}" if data.has_pixel_spacing else "")
+        self.z_label.setText(f"z: {z:.2f}" if data.has_image_positions else "")
         self.ij_label.setText(f"Pos: ({i}, {j})")
-        self.hu_label.setText(f"{self.value_name}: {slice_data[i, j]:.0f}")
+        self.hu_label.setText(self.value_at(slice_data[i, j]))
+
+    def value_at(self, value: Any) -> str:
+        """The value of a voxel as the status bar reports it."""
+        if self.pix_label.data is not None and self.pix_label.data.is_color:
+            return "RGB: " + ", ".join(f"{sample:.0f}" for sample in value)
+        return f"{self.value_name}: {value:.0f}"
 
     @property
     def slice_z(self) -> float | None:
         """z of the displayed slice, if the whole slice shares a single one."""
         data = self.pix_label.data
-        if data is None or self.pix_label.plane != AXIAL:
+        if data is None or self.pix_label.plane != AXIAL or not data.has_image_positions:
             return None
         return data.voxel_position(self.pix_label.slice, 0, 0)[2]
 
@@ -276,7 +320,9 @@ class Viewer(QtWidgets.QMainWindow):
         return "HU" if data is not None and data.uses_hounsfield_units else "Value"
 
     def update_cw(self) -> None:
-        if self.pix_label.data is None:
+        data = self.pix_label.data
+        # Colour images are not windowed, so there is no window to report
+        if data is None or data.is_color:
             self.cw_label.setText("")
         else:
             self.cw_label.setText(

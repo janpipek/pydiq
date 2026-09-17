@@ -56,6 +56,12 @@ Options:
 
 Limitations
 -----------
-Currently, the viewer supports only Computed Radiography (CR), Computed Tomography (CT) and
-Magnetic Resonance Imaging (MRI) images with normal orientation (x, y, z)
-in one-slice-per-file format.
+Currently, the viewer supports only Computed Radiography (CR), Computed Tomography (CT),
+Magnetic Resonance Imaging (MRI), Nuclear Medicine (NM), Ultrasound (US) and other (OT,
+typically screenshots and other secondary captures) images with normal orientation (x, y, z).
+Multi-frame files are shown one image at a time; unless the file says where
+its individual frames are, they all share the position of the file itself.
+
+Ultrasound is measured in its own image regions rather than in patient coordinates,
+so its images have no position and no physical size to report. Colour images
+are shown as they are and cannot be windowed.

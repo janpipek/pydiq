@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
 from qtpy import QtWidgets, QtCore, QtGui
 
 from pydiq.dicom_data import DicomData, AXIAL, ALLOWED_PLANES, DEFAULT_HU_WINDOW
@@ -23,7 +24,7 @@ class TrackingLabel(QtWidgets.QLabel):
         self.window.mouse_y = -1
         self.window.update_coordinates()
 
-    def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
+    def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None: 
         position = event.position().toPoint()
         self.window.mouse_x = position.x()
         self.window.mouse_y = position.y()
@@ -183,6 +184,8 @@ class DicomWidget(TrackingLabel):
 
     @QtCore.Slot()
     def on_data_changed(self) -> None:
+        # New data may hold fewer images than are currently shown
+        self.slice = min(self._slice, max(self.slice_count - 1, 0))
         self.reset_calibration()
         self.update_image()
 
@@ -196,14 +199,20 @@ class DicomWidget(TrackingLabel):
 
     def update_image(self) -> None:
         if self._data is not None:
-            # Prepare image integer data
             raw_data = self._data.get_slice(self.plane, self.slice)
-            data = ((raw_data - self._low_value) / self.window_width * 256).clip(0, 255).astype("uint8")
+            if self._data.is_color:
+                # Colour images are shown as they were meant to be seen
+                data = np.ascontiguousarray(raw_data, dtype="uint8")
+                image_format = QtGui.QImage.Format.Format_RGB888
+            else:
+                data = ((raw_data - self._low_value) / self.window_width * 256).clip(0, 255).astype("uint8")
+                image_format = QtGui.QImage.Format.Format_Indexed8
             # copy() because QImage does not take ownership of the numpy buffer
             self._image = QtGui.QImage(
-                data, data.shape[1], data.shape[0], data.strides[0], QtGui.QImage.Format.Format_Indexed8
+                data, data.shape[1], data.shape[0], data.strides[0], image_format
             ).copy()
-            self._image.setColorTable(self._color_table)
+            if not self._data.is_color:
+                self._image.setColorTable(self._color_table)
         else:
             self._image = None
         self.update_pixmap()
