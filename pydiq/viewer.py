@@ -2,10 +2,9 @@ import logging
 import os
 from typing import Any
 
-from qtpy import QtWidgets, QtCore
+from qtpy import QtWidgets, QtCore, QtGui
 
 import pydicom
-import numpy as np
 
 
 from pydiq.dicom_data import DicomData
@@ -51,19 +50,20 @@ class Viewer(QtWidgets.QMainWindow):
         # self.studies_list.itemSelectionChanged.connect(self.on_study_item_change)
         self.series_dock.setWidget(self.series_list)
 
+        self.name_label = QtWidgets.QLabel("")
         self.hu_label = QtWidgets.QLabel("No image")
-        self.c_label = QtWidgets.QLabel("")
-        self.cw_label = QtWidgets.QLabel("")        
+        self.cw_label = QtWidgets.QLabel("")
         self.x_label = QtWidgets.QLabel("")
         self.y_label = QtWidgets.QLabel("")
         self.z_label = QtWidgets.QLabel("")
         self.use_fractional_coordinates: bool = True
         self.ij_label = QtWidgets.QLabel("")
 
-        self._zoom_level: int = 1
         self.mouse_x: int = -1
         self.mouse_y: int = -1
-       
+
+        # The name of the image on the left, the readouts on the right
+        self.statusBar().addWidget(self.name_label)
         self.statusBar().addPermanentWidget(self.cw_label)
         self.statusBar().addPermanentWidget(self.ij_label)
         self.statusBar().addPermanentWidget(self.x_label)
@@ -71,7 +71,8 @@ class Viewer(QtWidgets.QMainWindow):
         self.statusBar().addPermanentWidget(self.z_label)
         self.statusBar().addPermanentWidget(self.hu_label)
 
-        self.data: np.ndarray = np.ndarray((512, 512), np.int8)
+        self.pix_label.data_changed.connect(self.update_cw)
+        self.pix_label.calibration_changed.connect(self.update_cw)
         self.update_cw()
 
         if os.path.isfile(path):
@@ -123,10 +124,31 @@ class Viewer(QtWidgets.QMainWindow):
         self.menuBar().addMenu(self.tools_menu)
 
     def show_structure(self) -> None:
-        if self.file_name:
-            f = pydicom.dcmread(self.file_name)
-            l = QtWidgets.QLabel(str(f))
-            l.show()
+        if not self.file_name:
+            return
+        try:
+            # pydicom parses lazily, so rendering can fail even if reading did not
+            structure = str(pydicom.dcmread(self.file_name))
+        except Exception:
+            logger.exception("Could not read the structure of %s", self.file_name)
+            self.statusBar().showMessage("Could not read the DICOM structure.", 5000)
+            return
+
+        # The dialog is parented to the viewer, so that Qt keeps it alive
+        # for as long as it is open (and destroys it once closed).
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle(f"DICOM structure: {os.path.basename(self.file_name)}")
+        dialog.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
+        dialog.resize(800, 600)
+
+        text = QtWidgets.QPlainTextEdit(structure, dialog)
+        text.setReadOnly(True)
+        text.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.NoWrap)
+        text.setFont(QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.SystemFont.FixedFont))
+
+        layout = QtWidgets.QVBoxLayout(dialog)
+        layout.addWidget(text)
+        dialog.show()
 
     def toggle_full_screen(self, toggled: bool) -> None:
         if toggled:
@@ -157,50 +179,82 @@ class Viewer(QtWidgets.QMainWindow):
             self.file_name = self.files[0]
 
 
-    def get_coordinates(self, i: float, j: float) -> tuple[float, float, float]:
-        x = self.image_position[0] + self.pixel_spacing[0] * i
-        y = self.image_position[1] + self.pixel_spacing[1] * j
-        z = self.image_position[2]
-        return x, y, z
+    @property
+    def zoom_factor(self) -> float:
+        """Real size of a data voxel in screen pixels."""
+        return self.pix_label.zoom_factor
+
+    def get_coordinates(self, row: float, column: float) -> tuple[float, float, float]:
+        """DICOM patient coordinates (in mm) of a voxel in the current slice."""
+        data = self.pix_label.data
+        if data is None:
+            raise ValueError("No image loaded.")
+        # PixelSpacing is (row, column) = (y, x) - the axes are swapped here
+        row_spacing, column_spacing = data.pixel_spacing
+        x, y, z = data.image_position
+        return x + column_spacing * column, y + row_spacing * row, z
 
     @property
-    def mouse_ij(self) -> tuple[float, float]:
-        '''Mouse position as voxel index in current DICOM slice.'''
-        return self.mouse_y // self.zoom_factor, self.mouse_x // self.zoom_factor
+    def mouse_ij(self) -> tuple[int, int]:
+        '''Mouse position as (row, column) voxel index in current DICOM slice.'''
+        return int(self.mouse_y // self.zoom_factor), int(self.mouse_x // self.zoom_factor)
 
     @property
     def mouse_xyz(self) -> tuple[float, float, float]:
         '''Mouse position in DICOM coordinates.'''
         if self.use_fractional_coordinates:
-            # TODO: Fix for zoom out
-            correction = (self.zoom_factor - 1.) / (2. * self.zoom_factor) # To get center of left top pixel in a zoom grid
-            return self.get_coordinates(self.mouse_x / self.zoom_factor - correction, self.mouse_y / self.zoom_factor - correction)
+            # To get the center of the left top pixel in a zoom grid
+            correction = (self.zoom_factor - 1.) / (2. * self.zoom_factor)
+            return self.get_coordinates(
+                self.mouse_y / self.zoom_factor - correction,
+                self.mouse_x / self.zoom_factor - correction,
+            )
         else:
-            return self.get_coordinates(self.mouse_x // self.zoom_factor, self.mouse_y // self.zoom_factor)
+            return self.get_coordinates(*self.mouse_ij)
 
     def update_coordinates(self) -> None:
-        if self.pix_label.data and False:
-            x, y, z = self.mouse_xyz
-            i, j = self.mouse_ij
-            self.z_label.setText("z: %.2f" % z)
-            if i >= 0 and j >= 0 and i < self.data.shape[0] and j < self.data.shape[1]:
-                self.x_label.setText("x: %.2f" % x)
-                self.y_label.setText("y: %.2f" % y)
-                self.ij_label.setText("Pos: (%d, %d)" % self.mouse_ij)
-                self.hu_label.setText("HU: %d" % int(self.data[i, j]))
-                return
-            else:
-                self.hu_label.setText("HU: ???")     
-        else:
+        data = self.pix_label.data
+        if data is None:
+            self._clear_position_labels()
             self.hu_label.setText("No image")
-        self.ij_label.setText("")
-        self.x_label.setText("")
-        self.y_label.setText("")
+            return
+        if self.mouse_x < 0 or self.mouse_y < 0:
+            # The mouse is somewhere else than over the image
+            self._clear_position_labels()
+            self.hu_label.setText("")
+            return
+
+        slice_data = data.get_slice(self.pix_label.plane, self.pix_label.slice)
+        i, j = self.mouse_ij
+        if not (0 <= i < slice_data.shape[0] and 0 <= j < slice_data.shape[1]):
+            self._clear_position_labels()
+            self.hu_label.setText(f"{self.value_name}: ???")
+            return
+
+        x, y, z = self.mouse_xyz
+        self.x_label.setText(f"x: {x:.2f}")
+        self.y_label.setText(f"y: {y:.2f}")
+        self.z_label.setText(f"z: {z:.2f}")
+        self.ij_label.setText(f"Pos: ({i}, {j})")
+        self.hu_label.setText(f"{self.value_name}: {slice_data[i, j]:.0f}")
+
+    def _clear_position_labels(self) -> None:
+        for label in (self.ij_label, self.x_label, self.y_label, self.z_label):
+            label.setText("")
+
+    @property
+    def value_name(self) -> str:
+        """How to call the voxel values of the currently shown image."""
+        data = self.pix_label.data
+        return "HU" if data is not None and data.uses_hounsfield_units else "Value"
 
     def update_cw(self) -> None:
-        # self.cw_label.setText("W: %d C: %d" % (int(self.pix_label.w), int(self.pix_label.c)))
-        # self.update_image()
-        pass
+        if self.pix_label.data is None:
+            self.cw_label.setText("")
+        else:
+            self.cw_label.setText(
+                f"W: {self.pix_label.window_width:.0f} C: {self.pix_label.window_center:.0f}"
+            )
 
     @property
     def file_name(self) -> str | None:
@@ -208,20 +262,21 @@ class Viewer(QtWidgets.QMainWindow):
 
     @file_name.setter
     def file_name(self, value: str | None) -> None:
-        try:
-            self._file_name = value
-            data = DicomData.from_files([self._file_name])
-            self.pix_label.data = data
-            self.setWindowTitle("pydiq: " + self._file_name)
-        except BaseException:
-            logger.exception("Could not load image from %s", value)
-            self.pix_label.data = None
-            self.setWindowTitle("pydiq: No image")
+        self._file_name = value
+        if value is None:
+            self._show_no_image()
+        else:
+            try:
+                self.pix_label.data = DicomData.from_files([value])
+                self.setWindowTitle(f"pydiq: {value}")
+                self.name_label.setText(os.path.basename(value))
+            except BaseException:
+                logger.exception("Could not load image from %s", value)
+                self._show_no_image()
+        self.update_coordinates()
 
-            # try:
-            #     self.image_position = np.array([float(t) for t in self.file.ImagePositionPatient])
-            # except:
-            #     self.image_position = np.array([1., 1., 1.])
-            # self.pixel_spacing = np.array([float(t) for t in self.file.PixelSpacing])
-
+    def _show_no_image(self) -> None:
+        self.pix_label.data = None
+        self.setWindowTitle("pydiq: No image")
+        self.name_label.setText("")
 

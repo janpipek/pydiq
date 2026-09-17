@@ -18,26 +18,29 @@ class TrackingLabel(QtWidgets.QLabel):
         self.last_move_y: int | None = None
         self.window = parent
 
-    def mouseLeaveEvent(self, event: QtGui.QMouseEvent) -> None:
+    def leaveEvent(self, event: QtCore.QEvent) -> None:
         self.window.mouse_x = -1
         self.window.mouse_y = -1
         self.window.update_coordinates()
 
     def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
-        self.window.mouse_x = event.x()
-        self.window.mouse_y = event.y()
+        position = event.position().toPoint()
+        self.window.mouse_x = position.x()
+        self.window.mouse_y = position.y()
         self.window.update_coordinates()
 
         if event.buttons() == QtCore.Qt.MouseButton.LeftButton:
-            self.window_width += event.y() - self.last_move_y
-            self.window_center += event.x() - self.last_move_x
+            if self.last_move_x is not None and self.last_move_y is not None:
+                self.window_width += position.y() - self.last_move_y
+                self.window_center += position.x() - self.last_move_x
 
-            self.last_move_x = event.x()
-            self.last_move_y = event.y()
+            self.last_move_x = position.x()
+            self.last_move_y = position.y()
 
     def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
-        self.last_move_x = event.x()
-        self.last_move_y = event.y()
+        position = event.position().toPoint()
+        self.last_move_x = position.x()
+        self.last_move_y = position.y()
 
     def mouseReleaseEvent(self, event: QtGui.QMouseEvent) -> None:
         self.last_move_x = None
@@ -106,20 +109,6 @@ class DicomWidget(TrackingLabel):
         self.calibration_changed.connect(self.on_calibration_changed)
         self.slice_changed.connect(self.on_data_selection_changed)
         self.plane_changed.connect(self.on_data_selection_changed)
-
-    @property
-    def mouse_xyz(self) -> tuple[float, float, float] | None:
-        pass
-
-    @property
-    def mouse_ij(self) -> tuple[float, float] | None:
-        pass
-
-    def get_coordinates(self, i: float, j: float) -> tuple[float, float, float]:
-        x = self.data.image_position[0] + self.pixel_spacing[0] * i
-        y = self.image_position[1] + self.pixel_spacing[1] * j
-        z = self.image_position[2]
-        return x, y, z
 
     @property
     def zoom_level(self) -> int:
