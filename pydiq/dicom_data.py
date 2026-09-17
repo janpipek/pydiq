@@ -1,9 +1,12 @@
+import logging
 from typing import Any
 
 import numpy as np
 import pydicom
 from pydicom.multival import MultiValue
 
+
+logger = logging.getLogger(__name__)
 
 # Anatomical planes
 TRANSVERSE = AXIAL = 0
@@ -34,8 +37,8 @@ class DicomData:
         window: tuple[float, float] | None = None
 
         for file_path in files:
+            logger.debug("Reading %s...", file_path)
             f = pydicom.dcmread(file_path)
-            print(f"Reading {file_path}...")
 
             # Get modality
             if modality:

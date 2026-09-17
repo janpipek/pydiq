@@ -1,6 +1,10 @@
+import logging
 import os
 
 import pydicom
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_id(path: str) -> tuple[str, str]:
@@ -15,7 +19,8 @@ def is_dicom_file(path: str) -> bool:
     try:
         with open(path, "rb") as f:
             return f.read(132).decode("ASCII")[-4:] == "DICM"
-    except:
+    except Exception:
+        logger.debug("Cannot read %s.", path, exc_info=True)
         return False
 
 

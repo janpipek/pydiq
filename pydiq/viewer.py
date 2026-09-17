@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Any
 
@@ -10,6 +11,9 @@ import numpy as np
 from pydiq.dicom_data import DicomData
 from pydiq.dicom_widget import DicomWidget
 from pydiq.utils import dicom_files_in_dir
+
+
+logger = logging.getLogger(__name__)
 
 
 class Viewer(QtWidgets.QMainWindow):
@@ -123,7 +127,6 @@ class Viewer(QtWidgets.QMainWindow):
             f = pydicom.dcmread(self.file_name)
             l = QtWidgets.QLabel(str(f))
             l.show()
-            # print(str(f))
 
     def toggle_full_screen(self, toggled: bool) -> None:
         if toggled:
@@ -136,7 +139,6 @@ class Viewer(QtWidgets.QMainWindow):
             self.file_name = None
         else:
             item = self.file_list.selectedItems()[0]
-            # print item.text()
             self.file_name = str(item.toolTip())
 
     def load_files(self, files: list[str]) -> None:
@@ -211,8 +213,8 @@ class Viewer(QtWidgets.QMainWindow):
             data = DicomData.from_files([self._file_name])
             self.pix_label.data = data
             self.setWindowTitle("pydiq: " + self._file_name)
-        except BaseException as exc:
-            print(exc)
+        except BaseException:
+            logger.exception("Could not load image from %s", value)
             self.pix_label.data = None
             self.setWindowTitle("pydiq: No image")
 
