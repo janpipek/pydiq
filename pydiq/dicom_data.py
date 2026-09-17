@@ -24,10 +24,11 @@ DEFAULT_IMAGE_POSITION: tuple[float, float, float] = (0.0, 0.0, 0.0)
 
 
 class DicomData:
-    ALLOWED_MODALITIES: tuple[str, ...] = ('CT', 'MR', 'CR', 'RT', 'NM', 'US', 'OT')
-
     # Modalities whose values are (rescaled to) Hounsfield units
     HU_MODALITIES: tuple[str, ...] = ('CT',)
+
+    # Where a DICOM file may keep the samples of an image
+    IMAGE_DATA: tuple[str, ...] = ('PixelData', 'FloatPixelData', 'DoubleFloatPixelData')
 
     # Ways of storing samples that can be shown as they are
     GRAYSCALE_INTERPRETATIONS: tuple[str, ...] = ('MONOCHROME1', 'MONOCHROME2')
@@ -69,14 +70,11 @@ class DicomData:
             logger.debug("Reading %s...", file_path)
             f = pydicom.dcmread(file_path)
 
-            # Get modality
-            if modality:
-                if modality != f.Modality:
-                    raise RuntimeError("Cannot mix images from different modalities")
-            elif f.Modality not in cls.ALLOWED_MODALITIES:
-                raise RuntimeError(f"{f.Modality} modality not supported.")
-            else:
-                modality = f.Modality
+            # Whether an image can be shown is decided by its pixel data
+            # and not by its modality - a stack still has to be of one kind.
+            if file_index and f.get("Modality") != modality:
+                raise RuntimeError("Cannot mix images from different modalities")
+            modality = f.get("Modality")
             if window is None:
                 window = cls._read_window(f)
             # In-plane spacing is assumed to be the same for the whole stack,
@@ -117,21 +115,27 @@ class DicomData:
         if array.ndim != expected_ndim:
             raise RuntimeError(f"Cannot read pixel data of shape {array.shape}.")
 
-        if not is_color and f.Modality in cls.HU_MODALITIES:
+        if not is_color and f.get("Modality") in cls.HU_MODALITIES:
             # The rescaling may differ from frame to frame
             slopes, intercepts = zip(*(cls._read_rescale(f, frame) for frame in range(len(array))))
             array = np.reshape(slopes, (-1, 1, 1)) * array + np.reshape(intercepts, (-1, 1, 1))
         return np.array(array)
 
-    @staticmethod
-    def _decode(f: pydicom.Dataset) -> tuple[np.ndarray, str]:
+    @classmethod
+    def _decode(cls, f: pydicom.Dataset) -> tuple[np.ndarray, str]:
         """Pixel data of a file, and how its samples are to be understood.
 
         Decoders of compressed data convert some colour spaces on the way,
         so what the file says about its samples need not hold for the
         array that comes out of it - the decoder is asked instead.
         """
-        decoder = get_decoder(f.file_meta.TransferSyntaxUID)
+        if not any(keyword in f for keyword in cls.IMAGE_DATA):
+            # Reports, plans, contours and the like are DICOM but not images
+            raise RuntimeError(f"The file holds no image ({f.get('Modality', 'unknown')} data).")
+        transfer_syntax = getattr(f.get("file_meta"), "TransferSyntaxUID", None)
+        if transfer_syntax is None:
+            raise RuntimeError("The file does not say how its image is encoded.")
+        decoder = get_decoder(transfer_syntax)
         array, properties = decoder.as_array(f)
         interpretation = properties.get("photometric_interpretation", f.PhotometricInterpretation)
         return np.asarray(array), str(interpretation)
