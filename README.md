@@ -33,9 +33,11 @@ To Do
 Dependencies
 ------------
 
-* Python 3.6+
-* qtpy (and therefore PyQt4 / PyQt5 / PySide - not automatically installed by pip!)
-* pydicom (1.3)
+* Python 3.10+
+* qtpy + PySide6
+* pydicom (3+)
+* pillow, pylibjpeg-openjpeg and python-gdcm to read compressed images
+  (JPEG, JPEG-LS, JPEG 2000)
 
 Tested on Linux and Windows.
 

@@ -24,6 +24,13 @@ dependencies = [
     "click",
     "numpy",
     "pydicom>=3",
+    # Decoders for compressed pixel data - pydicom itself only reads
+    # uncompressed (and RLE) images. This is pydicom's "pixeldata" extra
+    # without the GPL-licensed pylibjpeg-libjpeg and without pyjpegls,
+    # which ships no wheels for recent Pythons; python-gdcm covers JPEG-LS.
+    "pillow",
+    "pylibjpeg[openjpeg]",
+    "python-gdcm",
     "PySide6",
     "qtpy",
 ]
