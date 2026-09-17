@@ -8,7 +8,7 @@ from pydiq.viewer import Viewer
 
 @click.command()
 @click.argument("path", required=False, type=click.Path(dir_okay=True, file_okay=False, exists=True))
-def run_app(path):
+def run_app(path: str | None) -> None:
     if len(sys.argv) < 2:
         path = "."
     else:

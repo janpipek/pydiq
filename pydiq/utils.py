@@ -1,10 +1,9 @@
 import os
-from typing import List, Tuple
 
 import pydicom
 
 
-def get_id(path: str) -> Tuple[str, str]:
+def get_id(path: str) -> tuple[str, str]:
     f = pydicom.dcmread(path, stop_before_pixels=True)
     return f.StudyInstanceUID, f.SeriesInstanceUID
 
@@ -20,7 +19,7 @@ def is_dicom_file(path: str) -> bool:
         return False
 
 
-def dicom_files_in_dir(directory: str = ".") -> List[str]:
+def dicom_files_in_dir(directory: str = ".") -> list[str]:
     """Full paths of all DICOM files in the directory."""
     directory = os.path.expanduser(directory)
     candidates = [os.path.join(directory, f) for f in sorted(os.listdir(directory))]

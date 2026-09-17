@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional
+from typing import Any
 
 from qtpy import QtWidgets, QtCore
 
@@ -13,11 +13,11 @@ from pydiq.utils import dicom_files_in_dir
 
 
 class Viewer(QtWidgets.QMainWindow):
-    def __init__(self, path = None):
+    def __init__(self, path: str = "."):
         super(Viewer, self).__init__()
         self.setWindowTitle("pydiq - Python DICOM Viewer in Qt")
-        self.file = None
-        self._file_name = None
+        self.file: pydicom.Dataset | None = None
+        self._file_name: str | None = None
 
         self.high_hu = 2000
         self.low_hu = -1024
@@ -53,12 +53,12 @@ class Viewer(QtWidgets.QMainWindow):
         self.x_label = QtWidgets.QLabel("")
         self.y_label = QtWidgets.QLabel("")
         self.z_label = QtWidgets.QLabel("")
-        self.use_fractional_coordinates = True
+        self.use_fractional_coordinates: bool = True
         self.ij_label = QtWidgets.QLabel("")
 
-        self._zoom_level = 1
-        self.mouse_x = -1
-        self.mouse_y = -1
+        self._zoom_level: int = 1
+        self.mouse_x: int = -1
+        self.mouse_y: int = -1
        
         self.statusBar().addPermanentWidget(self.cw_label)
         self.statusBar().addPermanentWidget(self.ij_label)
@@ -67,7 +67,7 @@ class Viewer(QtWidgets.QMainWindow):
         self.statusBar().addPermanentWidget(self.z_label)
         self.statusBar().addPermanentWidget(self.hu_label)
 
-        self.data = np.ndarray((512, 512), np.int8)
+        self.data: np.ndarray = np.ndarray((512, 512), np.int8)
         self.update_cw()
 
         if os.path.isfile(path):
@@ -76,7 +76,7 @@ class Viewer(QtWidgets.QMainWindow):
             self.load_files(dicom_files_in_dir(path))
         self.build_menu()
 
-    def open_directory(self):
+    def open_directory(self) -> None:
         dialog = QtWidgets.QFileDialog(self)
         dialog.setFileMode(QtWidgets.QFileDialog.DirectoryOnly)
         dialog.setViewMode(QtWidgets.QFileDialog.List)
@@ -85,7 +85,7 @@ class Viewer(QtWidgets.QMainWindow):
             directory = str(dialog.selectedFiles()[0])
             self.load_files(dicom_files_in_dir(directory))
 
-    def export_image(self):
+    def export_image(self) -> None:
         file_name, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
             "Save file",
@@ -95,7 +95,7 @@ class Viewer(QtWidgets.QMainWindow):
         if file_name:
             self.pix_label._image.save(file_name)
 
-    def build_menu(self): 
+    def build_menu(self) -> None:
         self.file_menu = QtWidgets.QMenu('&File', self)
         self.file_menu.addAction('&Open directory', self.open_directory, QtCore.Qt.CTRL + QtCore.Qt.Key_O)
         self.file_menu.addAction('&Export image', self.export_image, QtCore.Qt.CTRL + QtCore.Qt.Key_S)
@@ -118,20 +118,20 @@ class Viewer(QtWidgets.QMainWindow):
         self.menuBar().addMenu(self.view_menu)
         self.menuBar().addMenu(self.tools_menu)
 
-    def show_structure(self):
+    def show_structure(self) -> None:
         if self.file_name:
             f = pydicom.dcmread(self.file_name)
             l = QtWidgets.QLabel(str(f))
             l.show()
             # print(str(f))
 
-    def toggle_full_screen(self, toggled):
+    def toggle_full_screen(self, toggled: bool) -> None:
         if toggled:
             self.setWindowState(QtCore.Qt.WindowFullScreen)
         else:
             self.setWindowState(QtCore.Qt.WindowNoState)
 
-    def on_file_item_change(self):
+    def on_file_item_change(self) -> None:
         if not len(self.file_list.selectedItems()):
             self.file_name = None
         else:
@@ -139,13 +139,13 @@ class Viewer(QtWidgets.QMainWindow):
             # print item.text()
             self.file_name = str(item.toolTip())
 
-    def load_files(self, files: List[str]):
+    def load_files(self, files: list[str]) -> None:
         self.series_list.clear()
-        self.series = {}
+        self.series: dict[str, Any] = {}
 
 
         self.file_list.clear()
-        self.files = files
+        self.files: list[str] = files
         for file_name in self.files:
             item = QtWidgets.QListWidgetItem(os.path.basename(file_name))
             item.setToolTip(file_name)
@@ -155,19 +155,19 @@ class Viewer(QtWidgets.QMainWindow):
             self.file_name = self.files[0]
 
 
-    def get_coordinates(self, i, j):
+    def get_coordinates(self, i: float, j: float) -> tuple[float, float, float]:
         x = self.image_position[0] + self.pixel_spacing[0] * i
         y = self.image_position[1] + self.pixel_spacing[1] * j
         z = self.image_position[2]
         return x, y, z
 
     @property
-    def mouse_ij(self):
+    def mouse_ij(self) -> tuple[float, float]:
         '''Mouse position as voxel index in current DICOM slice.'''
         return self.mouse_y // self.zoom_factor, self.mouse_x // self.zoom_factor
 
     @property
-    def mouse_xyz(self):
+    def mouse_xyz(self) -> tuple[float, float, float]:
         '''Mouse position in DICOM coordinates.'''
         if self.use_fractional_coordinates:
             # TODO: Fix for zoom out
@@ -176,7 +176,7 @@ class Viewer(QtWidgets.QMainWindow):
         else:
             return self.get_coordinates(self.mouse_x // self.zoom_factor, self.mouse_y // self.zoom_factor)
 
-    def update_coordinates(self):
+    def update_coordinates(self) -> None:
         if self.pix_label.data and False:
             x, y, z = self.mouse_xyz
             i, j = self.mouse_ij
@@ -195,17 +195,17 @@ class Viewer(QtWidgets.QMainWindow):
         self.x_label.setText("")
         self.y_label.setText("")
 
-    def update_cw(self):
+    def update_cw(self) -> None:
         # self.cw_label.setText("W: %d C: %d" % (int(self.pix_label.w), int(self.pix_label.c)))
         # self.update_image()
         pass
 
     @property
-    def file_name(self):
+    def file_name(self) -> str | None:
         return self._file_name
 
     @file_name.setter
-    def file_name(self, value):
+    def file_name(self, value: str | None) -> None:
         try:
             self._file_name = value
             data = DicomData.from_files([self._file_name])

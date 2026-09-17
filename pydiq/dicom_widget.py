@@ -1,24 +1,27 @@
-from typing import Tuple
+from typing import TYPE_CHECKING, Any
 
 from qtpy import QtWidgets, QtCore, QtGui
 
 from pydiq.dicom_data import DicomData, AXIAL, ALLOWED_PLANES
 
+if TYPE_CHECKING:
+    from pydiq.viewer import Viewer
+
 
 class TrackingLabel(QtWidgets.QLabel):
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent: "Viewer", **kwargs: Any):
         super(TrackingLabel, self).__init__(parent)
         self.setMouseTracking(True)
-        self.last_move_x = None
-        self.last_move_y = None
+        self.last_move_x: int | None = None
+        self.last_move_y: int | None = None
         self.window = parent
 
-    def mouseLeaveEvent(self, event: QtGui.QMouseEvent):
+    def mouseLeaveEvent(self, event: QtGui.QMouseEvent) -> None:
         self.parent().mouse_x = -1
         self.parent().mouse_y = -1
         self.parent().update_coordinates()
 
-    def mouseMoveEvent(self, event: QtGui.QMouseEvent):
+    def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
         self.window.mouse_x = event.x()
         self.window.mouse_y = event.y()
         self.window.update_coordinates()
@@ -30,15 +33,15 @@ class TrackingLabel(QtWidgets.QLabel):
             self.last_move_x = event.x()
             self.last_move_y = event.y()
 
-    def mousePressEvent(self, event: QtGui.QMouseEvent):
+    def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
         self.last_move_x = event.x()
         self.last_move_y = event.y()
 
-    def mouseReleaseEvent(self, event: QtGui.QMouseEvent):
+    def mouseReleaseEvent(self, event: QtGui.QMouseEvent) -> None:
         self.last_move_x = None
         self.last_move_y = None
 
-    def wheelEvent(self, event: QtGui.QWheelEvent):
+    def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
         file_list = self.window.file_list
         if len(file_list.selectedItems()):
             index = file_list.row(file_list.selectedItems()[0])
@@ -61,24 +64,24 @@ class DicomWidget(TrackingLabel):
     """Widget for displaying DICOM data.
 
     """
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent: "Viewer", **kwargs: Any):
         # Qt initialization
         super(DicomWidget, self).__init__(parent, **kwargs)
         self.setCursor(QtCore.Qt.CrossCursor)
         self.setMouseTracking(True)
 
         # Inner data
-        self._zoom_level = kwargs.get("zoom_level", 0)
-        self._data = kwargs.get("data", None)
-        self._scaled_image = None
-        self._low_hu = kwargs.get("low_hu", -1000)
-        self._high_hu = kwargs.get("high_hu", 3000)
-        self._plane = kwargs.get("plane", AXIAL)
-        self._slice = kwargs.get("slice", 0)
-        self._color_table = kwargs.get("color_table", [QtGui.qRgb(i, i, i) for i in range(256)])
+        self._zoom_level: int = kwargs.get("zoom_level", 0)
+        self._data: DicomData | None = kwargs.get("data", None)
+        self._scaled_image: QtGui.QImage | None = None
+        self._low_hu: float = kwargs.get("low_hu", -1000)
+        self._high_hu: float = kwargs.get("high_hu", 3000)
+        self._plane: int = kwargs.get("plane", AXIAL)
+        self._slice: int = kwargs.get("slice", 0)
+        self._color_table: list[int] = kwargs.get("color_table", [QtGui.qRgb(i, i, i) for i in range(256)])
 
-        self._image = None
-        self._pixmap = None
+        self._image: QtGui.QImage | None = None
+        self._pixmap: QtGui.QPixmap | None = None
 
         # Signals & slots
         self._auto_wire()
@@ -94,7 +97,7 @@ class DicomWidget(TrackingLabel):
     slice_changed = QtCore.Signal(name="slice_changed")
     plane_changed = QtCore.Signal(name="plane_changed")
 
-    def _auto_wire(self):
+    def _auto_wire(self) -> None:
         """Wire all signals & slots that are necessary for the widget to work."""
         self.zoom_changed.connect(self.on_zoom_changed)
         self.data_changed.connect(self.on_data_changed)
@@ -102,14 +105,14 @@ class DicomWidget(TrackingLabel):
         self.plane_changed.connect(self.on_data_selection_changed)
 
     @property
-    def mouse_xyz(self):
+    def mouse_xyz(self) -> tuple[float, float, float] | None:
         pass
 
     @property
-    def mouse_ij(self):
+    def mouse_ij(self) -> tuple[float, float] | None:
         pass
 
-    def get_coordinates(self, i: float, j: float) -> Tuple[float, float, float]:
+    def get_coordinates(self, i: float, j: float) -> tuple[float, float, float]:
         x = self.data.image_position[0] + self.pixel_spacing[0] * i
         y = self.image_position[1] + self.pixel_spacing[1] * j
         z = self.image_position[2]
@@ -124,6 +127,12 @@ class DicomWidget(TrackingLabel):
         """
         return self._zoom_level
 
+    @zoom_level.setter
+    def zoom_level(self, value: int) -> None:
+        if self._zoom_level != value:
+            self._zoom_level = value
+            self.zoom_changed.emit()
+
     @property
     def zoom_factor(self) -> float:
         """Real size of data voxel in screen pixels."""
@@ -132,39 +141,33 @@ class DicomWidget(TrackingLabel):
         else:
             return 1.0 / (1 - self._zoom_level)
 
-    @zoom_level.setter
-    def zoom_level(self, value):
-        if self._zoom_level != value:
-            self._zoom_level = value
-            self.zoom_changed.emit()
-
-    def decrease_zoom(self, amount=1):
+    def decrease_zoom(self, amount: int = 1) -> None:
         self.zoom_level -= amount
 
-    def increase_zoom(self, amount=1):
+    def increase_zoom(self, amount: int = 1) -> None:
         self.zoom_level += amount
 
-    def reset_zoom(self):
+    def reset_zoom(self) -> None:
         self.zoom_level = 0
 
     @QtCore.Slot()
-    def on_zoom_changed(self):
+    def on_zoom_changed(self) -> None:
         if self._image:
             self.update_image()
 
     @QtCore.Slot()
-    def on_data_changed(self):
+    def on_data_changed(self) -> None:
         self.update_image()
 
     @QtCore.Slot()
-    def on_calibration_changed(self):
+    def on_calibration_changed(self) -> None:
         self.update_image()
 
     @QtCore.Slot()
-    def on_data_selection_changed(self):
+    def on_data_selection_changed(self) -> None:
         self.update_image()
 
-    def update_image(self):
+    def update_image(self) -> None:
         if self._data is not None:
             # Prepare image integer data
             raw_data = self._data.get_slice(self.plane, self.slice)
@@ -179,7 +182,7 @@ class DicomWidget(TrackingLabel):
             self._image = None
         self.update_pixmap()
 
-    def update_pixmap(self):
+    def update_pixmap(self) -> None:
         if self._image is not None:
             pixmap = QtGui.QPixmap.fromImage(self._image)
             if self.zoom_factor != 1:
@@ -196,11 +199,11 @@ class DicomWidget(TrackingLabel):
             self.setText("No image.")
 
     @property
-    def data(self) -> DicomData:
+    def data(self) -> DicomData | None:
         return self._data
 
     @data.setter
-    def data(self, d: DicomData):
+    def data(self, d: DicomData | None) -> None:
         if self._data != d:
             self._data = d
             self.data_changed.emit()
@@ -210,7 +213,7 @@ class DicomWidget(TrackingLabel):
         return (self._high_hu + self._low_hu) / 2
 
     @window_center.setter
-    def window_center(self, value):
+    def window_center(self, value: float) -> None:
         if value != self.window_center:
             original = self.window_center
             self._low_hu += value - original
@@ -222,7 +225,7 @@ class DicomWidget(TrackingLabel):
         return self._high_hu - self._low_hu
 
     @window_width.setter
-    def window_width(self, value: float):
+    def window_width(self, value: float) -> None:
         if value < 0:
             value = 0
         original = self.window_width
@@ -236,7 +239,7 @@ class DicomWidget(TrackingLabel):
         return self._plane
 
     @plane.setter
-    def plane(self, value: int):
+    def plane(self, value: int) -> None:
         if value != self._plane:
             if value not in [ALLOWED_PLANES]:
                 raise ValueError("Invalid plane identificator")
@@ -249,7 +252,7 @@ class DicomWidget(TrackingLabel):
         return self._slice
 
     @slice.setter
-    def slice(self, n: int):
+    def slice(self, n: int) -> None:
         if n != self._slice:
             self._slice = n
             self.slice_changed.emit()
