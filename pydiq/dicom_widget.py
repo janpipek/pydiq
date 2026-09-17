@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 
 
 class TrackingLabel(QtWidgets.QLabel):
+    window: "Viewer"
+
     def __init__(self, parent: "Viewer", **kwargs: Any):
         super(TrackingLabel, self).__init__(parent)
         self.setMouseTracking(True)
@@ -17,9 +19,9 @@ class TrackingLabel(QtWidgets.QLabel):
         self.window = parent
 
     def mouseLeaveEvent(self, event: QtGui.QMouseEvent) -> None:
-        self.parent().mouse_x = -1
-        self.parent().mouse_y = -1
-        self.parent().update_coordinates()
+        self.window.mouse_x = -1
+        self.window.mouse_y = -1
+        self.window.update_coordinates()
 
     def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
         self.window.mouse_x = event.x()

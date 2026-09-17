@@ -36,4 +36,7 @@ Homepage = "https://github.com/janpipek/pydiq"
 Repository = "https://github.com/janpipek/pydiq"
 
 [dependency-groups]
-dev = ["ruff"]
+dev = [
+    "mypy>=2.3.1",
+    "ruff",
+]
