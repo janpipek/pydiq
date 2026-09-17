@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Any
 
 from qtpy import QtWidgets, QtCore, QtGui
 
-from pydiq.dicom_data import DicomData, AXIAL, ALLOWED_PLANES
+from pydiq.dicom_data import DicomData, AXIAL, ALLOWED_PLANES, DEFAULT_HU_WINDOW
 
 if TYPE_CHECKING:
     from pydiq.viewer import Viewer
@@ -76,8 +76,8 @@ class DicomWidget(TrackingLabel):
         self._zoom_level: int = kwargs.get("zoom_level", 0)
         self._data: DicomData | None = kwargs.get("data", None)
         self._scaled_image: QtGui.QImage | None = None
-        self._low_hu: float = kwargs.get("low_hu", -1000)
-        self._high_hu: float = kwargs.get("high_hu", 3000)
+        self._low_value: float = kwargs.get("low_value", DEFAULT_HU_WINDOW[0])
+        self._high_value: float = kwargs.get("high_value", DEFAULT_HU_WINDOW[1])
         self._plane: int = kwargs.get("plane", AXIAL)
         self._slice: int = kwargs.get("slice", 0)
         self._color_table: list[int] = kwargs.get("color_table", [QtGui.qRgb(i, i, i) for i in range(256)])
@@ -103,6 +103,7 @@ class DicomWidget(TrackingLabel):
         """Wire all signals & slots that are necessary for the widget to work."""
         self.zoom_changed.connect(self.on_zoom_changed)
         self.data_changed.connect(self.on_data_changed)
+        self.calibration_changed.connect(self.on_calibration_changed)
         self.slice_changed.connect(self.on_data_selection_changed)
         self.plane_changed.connect(self.on_data_selection_changed)
 
@@ -159,6 +160,7 @@ class DicomWidget(TrackingLabel):
 
     @QtCore.Slot()
     def on_data_changed(self) -> None:
+        self.reset_calibration()
         self.update_image()
 
     @QtCore.Slot()
@@ -173,12 +175,11 @@ class DicomWidget(TrackingLabel):
         if self._data is not None:
             # Prepare image integer data
             raw_data = self._data.get_slice(self.plane, self.slice)
-            shape = raw_data.shape
-            data = (raw_data - self._low_hu) / self.window_width * 256
-            data[data < 0] = 0
-            data[data > 255] = 255
-            data = data.astype("int8")
-            self._image = QtGui.QImage(data, data.shape[1], data.shape[0], QtGui.QImage.Format.Format_Indexed8)
+            data = ((raw_data - self._low_value) / self.window_width * 256).clip(0, 255).astype("uint8")
+            # copy() because QImage does not take ownership of the numpy buffer
+            self._image = QtGui.QImage(
+                data, data.shape[1], data.shape[0], data.strides[0], QtGui.QImage.Format.Format_Indexed8
+            ).copy()
             self._image.setColorTable(self._color_table)
         else:
             self._image = None
@@ -212,19 +213,21 @@ class DicomWidget(TrackingLabel):
 
     @property
     def window_center(self) -> float:
-        return (self._high_hu + self._low_hu) / 2
+        """Center of the displayed value range (in HU for CT data)."""
+        return (self._high_value + self._low_value) / 2
 
     @window_center.setter
     def window_center(self, value: float) -> None:
         if value != self.window_center:
             original = self.window_center
-            self._low_hu += value - original
-            self._high_hu += value - original
+            self._low_value += value - original
+            self._high_value += value - original
             self.calibration_changed.emit()
 
     @property
     def window_width(self) -> float:
-        return self._high_hu - self._low_hu
+        """Width of the displayed value range (in HU for CT data)."""
+        return self._high_value - self._low_value
 
     @window_width.setter
     def window_width(self, value: float) -> None:
@@ -232,8 +235,16 @@ class DicomWidget(TrackingLabel):
             value = 0
         original = self.window_width
         if value != original:
-            self._low_hu -= (value - original) / 2
-            self._high_hu = self._low_hu + value
+            self._low_value -= (value - original) / 2
+            self._high_value = self._low_value + value
+            self.calibration_changed.emit()
+
+    def reset_calibration(self) -> None:
+        """Set the displayed value range to one sensible for the current data."""
+        low, high = self._data.default_window if self._data is not None else DEFAULT_HU_WINDOW
+        if (low, high) != (self._low_value, self._high_value):
+            self._low_value = low
+            self._high_value = high
             self.calibration_changed.emit()
 
     @property
