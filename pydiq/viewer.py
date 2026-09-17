@@ -34,10 +34,10 @@ class Viewer(QtWidgets.QMainWindow):
         self.setCentralWidget(scroll_area)
 
         self.series_dock = QtWidgets.QDockWidget("Series", self)
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.series_dock)
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.series_dock)
 
         self.file_dock = QtWidgets.QDockWidget("Images", self)
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.file_dock)
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.file_dock)
 
         self.file_list = QtWidgets.QListWidget()
         self.file_list.itemSelectionChanged.connect(self.on_file_item_change)
@@ -78,9 +78,9 @@ class Viewer(QtWidgets.QMainWindow):
 
     def open_directory(self) -> None:
         dialog = QtWidgets.QFileDialog(self)
-        dialog.setFileMode(QtWidgets.QFileDialog.DirectoryOnly)
-        dialog.setViewMode(QtWidgets.QFileDialog.List)
-        dialog.setOption(QtWidgets.QFileDialog.ShowDirsOnly, True)
+        dialog.setFileMode(QtWidgets.QFileDialog.FileMode.Directory)
+        dialog.setViewMode(QtWidgets.QFileDialog.ViewMode.List)
+        dialog.setOption(QtWidgets.QFileDialog.Option.ShowDirsOnly, True)
         if dialog.exec_():
             directory = str(dialog.selectedFiles()[0])
             self.load_files(dicom_files_in_dir(directory))
@@ -97,22 +97,22 @@ class Viewer(QtWidgets.QMainWindow):
 
     def build_menu(self) -> None:
         self.file_menu = QtWidgets.QMenu('&File', self)
-        self.file_menu.addAction('&Open directory', self.open_directory, QtCore.Qt.CTRL + QtCore.Qt.Key_O)
-        self.file_menu.addAction('&Export image', self.export_image, QtCore.Qt.CTRL + QtCore.Qt.Key_S)
-        self.file_menu.addAction('&Quit', self.close, QtCore.Qt.CTRL + QtCore.Qt.Key_Q)      
+        self.file_menu.addAction('&Open directory', self.open_directory, QtCore.Qt.Modifier.CTRL | QtCore.Qt.Key.Key_O)
+        self.file_menu.addAction('&Export image', self.export_image, QtCore.Qt.Modifier.CTRL | QtCore.Qt.Key.Key_S)
+        self.file_menu.addAction('&Quit', self.close, QtCore.Qt.Modifier.CTRL | QtCore.Qt.Key.Key_Q)      
 
         self.view_menu = QtWidgets.QMenu('&View', self)
-        self.view_menu.addAction('Zoom In', self.pix_label.increase_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Plus)
-        self.view_menu.addAction('Zoom Out', self.pix_label.decrease_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Minus)
-        self.view_menu.addAction('Zoom 1:1', self.pix_label.reset_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_0)
+        self.view_menu.addAction('Zoom In', self.pix_label.increase_zoom, QtCore.Qt.Modifier.CTRL | QtCore.Qt.Key.Key_Plus)
+        self.view_menu.addAction('Zoom Out', self.pix_label.decrease_zoom, QtCore.Qt.Modifier.CTRL | QtCore.Qt.Key.Key_Minus)
+        self.view_menu.addAction('Zoom 1:1', self.pix_label.reset_zoom, QtCore.Qt.Modifier.CTRL | QtCore.Qt.Key.Key_0)
         fullscreen = QtWidgets.QAction('&Full Screen', self)
         fullscreen.setCheckable(True)
-        fullscreen.setShortcut(QtCore.Qt.Key_F11)
+        fullscreen.setShortcut(QtCore.Qt.Key.Key_F11)
         fullscreen.toggled.connect(self.toggle_full_screen)
         self.view_menu.addAction(fullscreen)
 
         self.tools_menu = QtWidgets.QMenu("&Tools", self)
-        self.tools_menu.addAction('&Show DICOM structure', self.show_structure, QtCore.Qt.Key_F2)
+        self.tools_menu.addAction('&Show DICOM structure', self.show_structure, QtCore.Qt.Key.Key_F2)
 
         self.menuBar().addMenu(self.file_menu)
         self.menuBar().addMenu(self.view_menu)
@@ -127,9 +127,9 @@ class Viewer(QtWidgets.QMainWindow):
 
     def toggle_full_screen(self, toggled: bool) -> None:
         if toggled:
-            self.setWindowState(QtCore.Qt.WindowFullScreen)
+            self.setWindowState(QtCore.Qt.WindowState.WindowFullScreen)
         else:
-            self.setWindowState(QtCore.Qt.WindowNoState)
+            self.setWindowState(QtCore.Qt.WindowState.WindowNoState)
 
     def on_file_item_change(self) -> None:
         if not len(self.file_list.selectedItems()):

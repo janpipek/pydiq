@@ -26,7 +26,7 @@ class TrackingLabel(QtWidgets.QLabel):
         self.window.mouse_y = event.y()
         self.window.update_coordinates()
 
-        if event.buttons() == QtCore.Qt.LeftButton:
+        if event.buttons() == QtCore.Qt.MouseButton.LeftButton:
             self.window_width += event.y() - self.last_move_y
             self.window_center += event.x() - self.last_move_x
 
@@ -67,7 +67,7 @@ class DicomWidget(TrackingLabel):
     def __init__(self, parent: "Viewer", **kwargs: Any):
         # Qt initialization
         super(DicomWidget, self).__init__(parent, **kwargs)
-        self.setCursor(QtCore.Qt.CrossCursor)
+        self.setCursor(QtCore.Qt.CursorShape.CrossCursor)
         self.setMouseTracking(True)
 
         # Inner data
@@ -176,7 +176,7 @@ class DicomWidget(TrackingLabel):
             data[data < 0] = 0
             data[data > 255] = 255
             data = data.astype("int8")
-            self._image = QtGui.QImage(data, data.shape[1], data.shape[0], QtGui.QImage.Format_Indexed8)
+            self._image = QtGui.QImage(data, data.shape[1], data.shape[0], QtGui.QImage.Format.Format_Indexed8)
             self._image.setColorTable(self._color_table)
         else:
             self._image = None
@@ -188,10 +188,10 @@ class DicomWidget(TrackingLabel):
             if self.zoom_factor != 1:
                 if self.zoom_factor < 1:
                     pixmap = self._pixmap.scaled(pixmap.width() * self.zoom_factor, pixmap.height() * self.zoom_factor,
-                                                 QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
+                                                 QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation)
                 else:
                     pixmap = pixmap.scaled(pixmap.width() * self.zoom_factor, pixmap.height() * self.zoom_factor,
-                                           QtCore.Qt.KeepAspectRatio)
+                                           QtCore.Qt.AspectRatioMode.KeepAspectRatio)
             self._pixmap = pixmap
             self.setPixmap(self._pixmap)
             self.resize(pixmap.width(), pixmap.height())
