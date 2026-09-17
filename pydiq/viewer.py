@@ -7,7 +7,7 @@ from qtpy import QtWidgets, QtCore, QtGui
 import pydicom
 
 
-from pydiq.dicom_data import DicomData
+from pydiq.dicom_data import AXIAL, DicomData
 from pydiq.dicom_widget import DicomWidget
 from pydiq.utils import dicom_files_in_dir
 
@@ -73,6 +73,8 @@ class Viewer(QtWidgets.QMainWindow):
 
         self.pix_label.data_changed.connect(self.update_cw)
         self.pix_label.calibration_changed.connect(self.update_cw)
+        self.pix_label.data_changed.connect(self.update_coordinates)
+        self.pix_label.data_selection_changed.connect(self.update_coordinates)
         self.update_cw()
 
         if os.path.isfile(path):
@@ -185,61 +187,86 @@ class Viewer(QtWidgets.QMainWindow):
         return self.pix_label.zoom_factor
 
     def get_coordinates(self, row: float, column: float) -> tuple[float, float, float]:
-        """DICOM patient coordinates (in mm) of a voxel in the current slice."""
+        """DICOM patient coordinates (in mm) of a position in the shown slice."""
         data = self.pix_label.data
         if data is None:
             raise ValueError("No image loaded.")
-        # PixelSpacing is (row, column) = (y, x) - the axes are swapped here
-        row_spacing, column_spacing = data.pixel_spacing
-        x, y, z = data.image_position
-        return x + column_spacing * column, y + row_spacing * row, z
+        # Put the slice back into the index to address the whole stack,
+        # exactly the way DicomData.get_slice took it out.
+        index: list[float] = [row, column]
+        index.insert(self.pix_label.plane, self.pix_label.slice)
+        return data.voxel_position(int(index[0]), index[1], index[2])
 
     @property
-    def mouse_ij(self) -> tuple[int, int]:
+    def mouse_position(self) -> tuple[float, float] | None:
+        '''Mouse position as continuous (row, column) in the current slice.'''
+        return self.pix_label.voxel_at(self.mouse_x, self.mouse_y)
+
+    @property
+    def mouse_ij(self) -> tuple[int, int] | None:
         '''Mouse position as (row, column) voxel index in current DICOM slice.'''
-        return int(self.mouse_y // self.zoom_factor), int(self.mouse_x // self.zoom_factor)
+        position = self.mouse_position
+        if position is None:
+            return None
+        return int(position[0]), int(position[1])
 
-    @property
-    def mouse_xyz(self) -> tuple[float, float, float]:
-        '''Mouse position in DICOM coordinates.'''
+    def coordinates_of(self, position: tuple[float, float]) -> tuple[float, float, float]:
+        '''DICOM coordinates of a continuous (row, column) in the shown slice.'''
+        row, column = position
         if self.use_fractional_coordinates:
             # To get the center of the left top pixel in a zoom grid
             correction = (self.zoom_factor - 1.) / (2. * self.zoom_factor)
-            return self.get_coordinates(
-                self.mouse_y / self.zoom_factor - correction,
-                self.mouse_x / self.zoom_factor - correction,
-            )
+            return self.get_coordinates(row - correction, column - correction)
         else:
-            return self.get_coordinates(*self.mouse_ij)
+            return self.get_coordinates(int(row), int(column))
+
+    @property
+    def mouse_xyz(self) -> tuple[float, float, float] | None:
+        '''Mouse position in DICOM coordinates, None if not on the image.'''
+        position = self.mouse_position
+        return None if position is None else self.coordinates_of(position)
 
     def update_coordinates(self) -> None:
         data = self.pix_label.data
         if data is None:
-            self._clear_position_labels()
+            self.z_label.setText("")
+            self._clear_cursor_labels()
             self.hu_label.setText("No image")
             return
-        if self.mouse_x < 0 or self.mouse_y < 0:
-            # The mouse is somewhere else than over the image
-            self._clear_position_labels()
-            self.hu_label.setText("")
+
+        # In an axial view the whole slice shares one z, so it stays readable
+        # wherever the mouse happens to be. In the other planes z varies
+        # across the image and is only known under the cursor.
+        slice_z = self.slice_z
+        self.z_label.setText("" if slice_z is None else f"z: {slice_z:.2f}")
+
+        position = self.mouse_position
+        if position is None:
+            # The cursor is not on the image - the surroundings of the image
+            # are not voxels and have no position or value to report.
+            self._clear_cursor_labels()
             return
 
+        i, j = int(position[0]), int(position[1])
         slice_data = data.get_slice(self.pix_label.plane, self.pix_label.slice)
-        i, j = self.mouse_ij
-        if not (0 <= i < slice_data.shape[0] and 0 <= j < slice_data.shape[1]):
-            self._clear_position_labels()
-            self.hu_label.setText(f"{self.value_name}: ???")
-            return
-
-        x, y, z = self.mouse_xyz
+        x, y, z = self.coordinates_of(position)
         self.x_label.setText(f"x: {x:.2f}")
         self.y_label.setText(f"y: {y:.2f}")
         self.z_label.setText(f"z: {z:.2f}")
         self.ij_label.setText(f"Pos: ({i}, {j})")
         self.hu_label.setText(f"{self.value_name}: {slice_data[i, j]:.0f}")
 
-    def _clear_position_labels(self) -> None:
-        for label in (self.ij_label, self.x_label, self.y_label, self.z_label):
+    @property
+    def slice_z(self) -> float | None:
+        """z of the displayed slice, if the whole slice shares a single one."""
+        data = self.pix_label.data
+        if data is None or self.pix_label.plane != AXIAL:
+            return None
+        return data.voxel_position(self.pix_label.slice, 0, 0)[2]
+
+    def _clear_cursor_labels(self) -> None:
+        """Blank the readouts that only mean something under the cursor."""
+        for label in (self.ij_label, self.x_label, self.y_label, self.hu_label):
             label.setText("")
 
     @property

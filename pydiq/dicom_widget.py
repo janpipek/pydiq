@@ -110,6 +110,40 @@ class DicomWidget(TrackingLabel):
         self.slice_changed.connect(self.on_data_selection_changed)
         self.plane_changed.connect(self.on_data_selection_changed)
 
+    def image_rect(self) -> QtCore.QRect | None:
+        """The part of the widget the image is actually drawn on.
+
+        The widget is not necessarily the same size as the image, and the
+        label aligns the pixmap inside it rather than filling it.
+        """
+        pixmap = self.pixmap()
+        if pixmap is None or pixmap.isNull():
+            return None
+        return QtWidgets.QStyle.alignedRect(
+            self.layoutDirection(),
+            self.alignment(),
+            pixmap.deviceIndependentSize().toSize(),
+            self.contentsRect(),
+        )
+
+    def voxel_at(self, x: int, y: int) -> tuple[float, float] | None:
+        """Continuous (row, column) in the data of a point in the widget.
+
+        None if the point is not on the image, so that the surroundings of
+        the image do not get reported as if they were part of it.
+        """
+        if self._data is None:
+            return None
+        rect = self.image_rect()
+        if rect is None or not rect.contains(x, y):
+            return None
+        row = (y - rect.top()) / self.zoom_factor
+        column = (x - rect.left()) / self.zoom_factor
+        rows, columns = self._data.get_slice_shape(self.plane)
+        if not (0 <= row < rows and 0 <= column < columns):
+            return None
+        return row, column
+
     @property
     def zoom_level(self) -> int:
         """Zoom level.
@@ -243,7 +277,7 @@ class DicomWidget(TrackingLabel):
     @plane.setter
     def plane(self, value: int) -> None:
         if value != self._plane:
-            if value not in [ALLOWED_PLANES]:
+            if value not in ALLOWED_PLANES:
                 raise ValueError("Invalid plane identificator")
             self._plane = value
             self.plane_changed.emit()

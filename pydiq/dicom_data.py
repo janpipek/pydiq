@@ -35,10 +35,16 @@ class DicomData:
         self._window: tuple[float, float] | None = kwargs.get("window")
         # Physical size of a voxel (row, column) in mm
         self.pixel_spacing: tuple[float, float] = kwargs.get("pixel_spacing", DEFAULT_PIXEL_SPACING)
-        # Patient coordinates (x, y, z) of the first voxel of the first slice
-        self.image_position: tuple[float, float, float] = kwargs.get(
-            "image_position", DEFAULT_IMAGE_POSITION
-        )
+        # Patient coordinates (x, y, z) of the first voxel of each slice
+        positions = kwargs.get("image_positions")
+        if positions is None:
+            positions = [DEFAULT_IMAGE_POSITION] * len(self._array)
+        self.image_positions: np.ndarray = np.asarray(positions, dtype=float).reshape(-1, 3)
+        if len(self.image_positions) != len(self._array):
+            raise ValueError(
+                f"Got {len(self.image_positions)} image positions "
+                f"for {len(self._array)} slices."
+            )
 
     @classmethod
     def from_files(cls, files: list[str]) -> "DicomData":
@@ -46,7 +52,7 @@ class DicomData:
         modality: str | None = None
         window: tuple[float, float] | None = None
         pixel_spacing = DEFAULT_PIXEL_SPACING
-        image_position = DEFAULT_IMAGE_POSITION
+        image_positions: list[tuple[float, float, float]] = []
 
         for index, file_path in enumerate(files):
             logger.debug("Reading %s...", file_path)
@@ -62,17 +68,18 @@ class DicomData:
                 modality = f.Modality
             if window is None:
                 window = cls._read_window(f)
-            # The geometry is taken from the first slice of the stack
+            # In-plane spacing is assumed to be the same for the whole stack,
+            # but each slice sits at its own position.
             if index == 0:
                 pixel_spacing = cls._read_pixel_spacing(f)
-                image_position = cls._read_image_position(f)
+            image_positions.append(cls._read_image_position(f))
             data.append(cls._read_pixel_data(f))
         return cls(
             np.array(data),
             modality=modality,
             window=window,
             pixel_spacing=pixel_spacing,
-            image_position=image_position,
+            image_positions=image_positions,
         )
 
     @classmethod
@@ -135,6 +142,21 @@ class DicomData:
         if high <= low:
             low, high = self._array.min(), self._array.max()
         return float(low), float(max(high, low + 1.0))
+
+    def voxel_position(self, slice_index: int, row: float, column: float) -> tuple[float, float, float]:
+        """Patient coordinates (in mm) of a voxel of the stack.
+
+        The index is given in the order of the underlying array, i.e. the
+        slice first. Rows and columns may be fractional to address a
+        position inside a voxel.
+
+        Only axis-aligned data are handled; ImageOrientationPatient is
+        ignored, as is the rest of the viewer.
+        """
+        x, y, z = self.image_positions[slice_index]
+        # PixelSpacing is (row, column) = (y, x) - the axes are swapped here
+        row_spacing, column_spacing = self.pixel_spacing
+        return float(x + column_spacing * column), float(y + row_spacing * row), float(z)
 
     @property
     def uses_hounsfield_units(self) -> bool:
