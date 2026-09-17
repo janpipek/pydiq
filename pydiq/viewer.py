@@ -1,23 +1,26 @@
+import logging
 import os
-from typing import List, Optional
+from typing import Any
 
-from qtpy import QtWidgets, QtCore
+from qtpy import QtWidgets, QtCore, QtGui
 
 import pydicom
-import numpy as np
 
 
-from pydiq.dicom_data import DicomData
+from pydiq.dicom_data import AXIAL, DicomData
 from pydiq.dicom_widget import DicomWidget
 from pydiq.utils import dicom_files_in_dir
 
 
+logger = logging.getLogger(__name__)
+
+
 class Viewer(QtWidgets.QMainWindow):
-    def __init__(self, path = None):
+    def __init__(self, path: str = "."):
         super(Viewer, self).__init__()
         self.setWindowTitle("pydiq - Python DICOM Viewer in Qt")
-        self.file = None
-        self._file_name = None
+        self.file: pydicom.Dataset | None = None
+        self._file_name: str | None = None
 
         self.high_hu = 2000
         self.low_hu = -1024
@@ -34,10 +37,13 @@ class Viewer(QtWidgets.QMainWindow):
         self.setCentralWidget(scroll_area)
 
         self.series_dock = QtWidgets.QDockWidget("Series", self)
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.series_dock)
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.series_dock)
 
-        self.file_dock = QtWidgets.QDockWidget("Images", self)
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.file_dock)
+        self.file_dock = QtWidgets.QDockWidget("Files", self)
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.file_dock)
+
+        self.image_dock = QtWidgets.QDockWidget("Images", self)
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.image_dock)
 
         self.file_list = QtWidgets.QListWidget()
         self.file_list.itemSelectionChanged.connect(self.on_file_item_change)
@@ -47,19 +53,25 @@ class Viewer(QtWidgets.QMainWindow):
         # self.studies_list.itemSelectionChanged.connect(self.on_study_item_change)
         self.series_dock.setWidget(self.series_list)
 
+        # The images of the selected file - one for all but multi-frame files
+        self.image_list = QtWidgets.QListWidget()
+        self.image_list.itemSelectionChanged.connect(self.on_image_item_change)
+        self.image_dock.setWidget(self.image_list)
+
+        self.name_label = QtWidgets.QLabel("")
         self.hu_label = QtWidgets.QLabel("No image")
-        self.c_label = QtWidgets.QLabel("")
-        self.cw_label = QtWidgets.QLabel("")        
+        self.cw_label = QtWidgets.QLabel("")
         self.x_label = QtWidgets.QLabel("")
         self.y_label = QtWidgets.QLabel("")
         self.z_label = QtWidgets.QLabel("")
-        self.use_fractional_coordinates = True
+        self.use_fractional_coordinates: bool = True
         self.ij_label = QtWidgets.QLabel("")
 
-        self._zoom_level = 1
-        self.mouse_x = -1
-        self.mouse_y = -1
-       
+        self.mouse_x: int = -1
+        self.mouse_y: int = -1
+
+        # The name of the image on the left, the readouts on the right
+        self.statusBar().addWidget(self.name_label)
         self.statusBar().addPermanentWidget(self.cw_label)
         self.statusBar().addPermanentWidget(self.ij_label)
         self.statusBar().addPermanentWidget(self.x_label)
@@ -67,8 +79,15 @@ class Viewer(QtWidgets.QMainWindow):
         self.statusBar().addPermanentWidget(self.z_label)
         self.statusBar().addPermanentWidget(self.hu_label)
 
-        self.data = np.ndarray((512, 512), np.int8)
+        self.pix_label.data_changed.connect(self.update_cw)
+        self.pix_label.calibration_changed.connect(self.update_cw)
+        self.pix_label.data_changed.connect(self.update_coordinates)
+        self.pix_label.data_selection_changed.connect(self.update_coordinates)
+        self.pix_label.data_changed.connect(self.update_image_list)
+        self.pix_label.plane_changed.connect(self.update_image_list)
+        self.pix_label.slice_changed.connect(self.select_current_image)
         self.update_cw()
+        self.update_image_list()
 
         if os.path.isfile(path):
             self.load_files([path])
@@ -76,16 +95,16 @@ class Viewer(QtWidgets.QMainWindow):
             self.load_files(dicom_files_in_dir(path))
         self.build_menu()
 
-    def open_directory(self):
+    def open_directory(self) -> None:
         dialog = QtWidgets.QFileDialog(self)
-        dialog.setFileMode(QtWidgets.QFileDialog.DirectoryOnly)
-        dialog.setViewMode(QtWidgets.QFileDialog.List)
-        dialog.setOption(QtWidgets.QFileDialog.ShowDirsOnly, True)
+        dialog.setFileMode(QtWidgets.QFileDialog.FileMode.Directory)
+        dialog.setViewMode(QtWidgets.QFileDialog.ViewMode.List)
+        dialog.setOption(QtWidgets.QFileDialog.Option.ShowDirsOnly, True)
         if dialog.exec_():
             directory = str(dialog.selectedFiles()[0])
             self.load_files(dicom_files_in_dir(directory))
 
-    def export_image(self):
+    def export_image(self) -> None:
         file_name, _ = QtWidgets.QFileDialog.getSaveFileName(
             self,
             "Save file",
@@ -95,57 +114,101 @@ class Viewer(QtWidgets.QMainWindow):
         if file_name:
             self.pix_label._image.save(file_name)
 
-    def build_menu(self): 
+    def build_menu(self) -> None:
         self.file_menu = QtWidgets.QMenu('&File', self)
-        self.file_menu.addAction('&Open directory', self.open_directory, QtCore.Qt.CTRL + QtCore.Qt.Key_O)
-        self.file_menu.addAction('&Export image', self.export_image, QtCore.Qt.CTRL + QtCore.Qt.Key_S)
-        self.file_menu.addAction('&Quit', self.close, QtCore.Qt.CTRL + QtCore.Qt.Key_Q)      
+        self.file_menu.addAction('&Open directory', self.open_directory, QtCore.Qt.Modifier.CTRL | QtCore.Qt.Key.Key_O)
+        self.file_menu.addAction('&Export image', self.export_image, QtCore.Qt.Modifier.CTRL | QtCore.Qt.Key.Key_S)
+        self.file_menu.addAction('&Quit', self.close, QtCore.Qt.Modifier.CTRL | QtCore.Qt.Key.Key_Q)      
 
         self.view_menu = QtWidgets.QMenu('&View', self)
-        self.view_menu.addAction('Zoom In', self.pix_label.increase_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Plus)
-        self.view_menu.addAction('Zoom Out', self.pix_label.decrease_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Minus)
-        self.view_menu.addAction('Zoom 1:1', self.pix_label.reset_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_0)
+        self.view_menu.addAction('Zoom In', self.pix_label.increase_zoom, QtCore.Qt.Modifier.CTRL | QtCore.Qt.Key.Key_Plus)
+        self.view_menu.addAction('Zoom Out', self.pix_label.decrease_zoom, QtCore.Qt.Modifier.CTRL | QtCore.Qt.Key.Key_Minus)
+        self.view_menu.addAction('Zoom 1:1', self.pix_label.reset_zoom, QtCore.Qt.Modifier.CTRL | QtCore.Qt.Key.Key_0)
         fullscreen = QtWidgets.QAction('&Full Screen', self)
         fullscreen.setCheckable(True)
-        fullscreen.setShortcut(QtCore.Qt.Key_F11)
+        fullscreen.setShortcut(QtCore.Qt.Key.Key_F11)
         fullscreen.toggled.connect(self.toggle_full_screen)
         self.view_menu.addAction(fullscreen)
 
         self.tools_menu = QtWidgets.QMenu("&Tools", self)
-        self.tools_menu.addAction('&Show DICOM structure', self.show_structure, QtCore.Qt.Key_F2)
+        self.tools_menu.addAction('&Show DICOM structure', self.show_structure, QtCore.Qt.Key.Key_F2)
 
         self.menuBar().addMenu(self.file_menu)
         self.menuBar().addMenu(self.view_menu)
         self.menuBar().addMenu(self.tools_menu)
 
-    def show_structure(self):
-        if self.file_name:
-            f = pydicom.read_file(self.file_name)
-            l = QtWidgets.QLabel(str(f))
-            l.show()
-            # print(str(f))
+    def show_structure(self) -> None:
+        if not self.file_name:
+            return
+        try:
+            # pydicom parses lazily, so rendering can fail even if reading did not
+            structure = str(pydicom.dcmread(self.file_name))
+        except Exception:
+            logger.exception("Could not read the structure of %s", self.file_name)
+            self.statusBar().showMessage("Could not read the DICOM structure.", 5000)
+            return
 
-    def toggle_full_screen(self, toggled):
+        # The dialog is parented to the viewer, so that Qt keeps it alive
+        # for as long as it is open (and destroys it once closed).
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle(f"DICOM structure: {os.path.basename(self.file_name)}")
+        dialog.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
+        dialog.resize(800, 600)
+
+        text = QtWidgets.QPlainTextEdit(structure, dialog)
+        text.setReadOnly(True)
+        text.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.NoWrap)
+        text.setFont(QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.SystemFont.FixedFont))
+
+        layout = QtWidgets.QVBoxLayout(dialog)
+        layout.addWidget(text)
+        dialog.show()
+
+    def toggle_full_screen(self, toggled: bool) -> None:
         if toggled:
-            self.setWindowState(QtCore.Qt.WindowFullScreen)
+            self.setWindowState(QtCore.Qt.WindowState.WindowFullScreen)
         else:
-            self.setWindowState(QtCore.Qt.WindowNoState)
+            self.setWindowState(QtCore.Qt.WindowState.WindowNoState)
 
-    def on_file_item_change(self):
+    def on_file_item_change(self) -> None:
         if not len(self.file_list.selectedItems()):
             self.file_name = None
         else:
             item = self.file_list.selectedItems()[0]
-            # print item.text()
             self.file_name = str(item.toolTip())
 
-    def load_files(self, files: List[str]):
+    def on_image_item_change(self) -> None:
+        items = self.image_list.selectedItems()
+        if items:
+            self.pix_label.slice = self.image_list.row(items[0])
+
+    @QtCore.Slot()
+    def update_image_list(self) -> None:
+        """List the images the current file offers to show."""
+        # The list only mirrors the widget, so its own signals say nothing new
+        self.image_list.blockSignals(True)
+        self.image_list.clear()
+        for index in range(self.pix_label.slice_count):
+            self.image_list.addItem(f"Image {index + 1}")
+        self.image_list.blockSignals(False)
+        self.select_current_image()
+
+    @QtCore.Slot()
+    def select_current_image(self) -> None:
+        """Point the image list at the image that is actually shown."""
+        if self.image_list.currentRow() == self.pix_label.slice:
+            return
+        self.image_list.blockSignals(True)
+        self.image_list.setCurrentRow(self.pix_label.slice)
+        self.image_list.blockSignals(False)
+
+    def load_files(self, files: list[str]) -> None:
         self.series_list.clear()
-        self.series = {}
+        self.series: dict[str, Any] = {}
 
 
         self.file_list.clear()
-        self.files = files
+        self.files: list[str] = files
         for file_name in self.files:
             item = QtWidgets.QListWidgetItem(os.path.basename(file_name))
             item.setToolTip(file_name)
@@ -155,71 +218,138 @@ class Viewer(QtWidgets.QMainWindow):
             self.file_name = self.files[0]
 
 
-    def get_coordinates(self, i, j):
-        x = self.image_position[0] + self.pixel_spacing[0] * i
-        y = self.image_position[1] + self.pixel_spacing[1] * j
-        z = self.image_position[2]
-        return x, y, z
+    @property
+    def zoom_factor(self) -> float:
+        """Real size of a data voxel in screen pixels."""
+        return self.pix_label.zoom_factor
+
+    def get_coordinates(self, row: float, column: float) -> tuple[float, float, float]:
+        """DICOM patient coordinates (in mm) of a position in the shown slice."""
+        data = self.pix_label.data
+        if data is None:
+            raise ValueError("No image loaded.")
+        # Put the slice back into the index to address the whole stack,
+        # exactly the way DicomData.get_slice took it out.
+        index: list[float] = [row, column]
+        index.insert(self.pix_label.plane, self.pix_label.slice)
+        return data.voxel_position(int(index[0]), index[1], index[2])
 
     @property
-    def mouse_ij(self):
-        '''Mouse position as voxel index in current DICOM slice.'''
-        return self.mouse_y // self.zoom_factor, self.mouse_x // self.zoom_factor
+    def mouse_position(self) -> tuple[float, float] | None:
+        '''Mouse position as continuous (row, column) in the current slice.'''
+        return self.pix_label.voxel_at(self.mouse_x, self.mouse_y)
 
     @property
-    def mouse_xyz(self):
-        '''Mouse position in DICOM coordinates.'''
+    def mouse_ij(self) -> tuple[int, int] | None:
+        '''Mouse position as (row, column) voxel index in current DICOM slice.'''
+        position = self.mouse_position
+        if position is None:
+            return None
+        return int(position[0]), int(position[1])
+
+    def coordinates_of(self, position: tuple[float, float]) -> tuple[float, float, float]:
+        '''DICOM coordinates of a continuous (row, column) in the shown slice.'''
+        row, column = position
         if self.use_fractional_coordinates:
-            # TODO: Fix for zoom out
-            correction = (self.zoom_factor - 1.) / (2. * self.zoom_factor) # To get center of left top pixel in a zoom grid
-            return self.get_coordinates(self.mouse_x / self.zoom_factor - correction, self.mouse_y / self.zoom_factor - correction)
+            # To get the center of the left top pixel in a zoom grid
+            correction = (self.zoom_factor - 1.) / (2. * self.zoom_factor)
+            return self.get_coordinates(row - correction, column - correction)
         else:
-            return self.get_coordinates(self.mouse_x // self.zoom_factor, self.mouse_y // self.zoom_factor)
-
-    def update_coordinates(self):
-        if self.pix_label.data and False:
-            x, y, z = self.mouse_xyz
-            i, j = self.mouse_ij
-            self.z_label.setText("z: %.2f" % z)
-            if i >= 0 and j >= 0 and i < self.data.shape[0] and j < self.data.shape[1]:
-                self.x_label.setText("x: %.2f" % x)
-                self.y_label.setText("y: %.2f" % y)
-                self.ij_label.setText("Pos: (%d, %d)" % self.mouse_ij)
-                self.hu_label.setText("HU: %d" % int(self.data[i, j]))
-                return
-            else:
-                self.hu_label.setText("HU: ???")     
-        else:
-            self.hu_label.setText("No image")
-        self.ij_label.setText("")
-        self.x_label.setText("")
-        self.y_label.setText("")
-
-    def update_cw(self):
-        # self.cw_label.setText("W: %d C: %d" % (int(self.pix_label.w), int(self.pix_label.c)))
-        # self.update_image()
-        pass
+            return self.get_coordinates(int(row), int(column))
 
     @property
-    def file_name(self):
+    def mouse_xyz(self) -> tuple[float, float, float] | None:
+        '''Mouse position in DICOM coordinates, None if not on the image.'''
+        position = self.mouse_position
+        return None if position is None else self.coordinates_of(position)
+
+    def update_coordinates(self) -> None:
+        data = self.pix_label.data
+        if data is None:
+            self.z_label.setText("")
+            self._clear_cursor_labels()
+            self.hu_label.setText("No image")
+            return
+
+        # In an axial view the whole slice shares one z, so it stays readable
+        # wherever the mouse happens to be. In the other planes z varies
+        # across the image and is only known under the cursor.
+        slice_z = self.slice_z
+        self.z_label.setText("" if slice_z is None else f"z: {slice_z:.2f}")
+
+        position = self.mouse_position
+        if position is None:
+            # The cursor is not on the image - the surroundings of the image
+            # are not voxels and have no position or value to report.
+            self._clear_cursor_labels()
+            return
+
+        i, j = int(position[0]), int(position[1])
+        slice_data = data.get_slice(self.pix_label.plane, self.pix_label.slice)
+        x, y, z = self.coordinates_of(position)
+        # Without a physical size, a position in mm would be made up
+        self.x_label.setText(f"x: {x:.2f}" if data.has_pixel_spacing else "")
+        self.y_label.setText(f"y: {y:.2f}" if data.has_pixel_spacing else "")
+        self.z_label.setText(f"z: {z:.2f}" if data.has_image_positions else "")
+        self.ij_label.setText(f"Pos: ({i}, {j})")
+        self.hu_label.setText(self.value_at(slice_data[i, j]))
+
+    def value_at(self, value: Any) -> str:
+        """The value of a voxel as the status bar reports it."""
+        if self.pix_label.data is not None and self.pix_label.data.is_color:
+            return "RGB: " + ", ".join(f"{sample:.0f}" for sample in value)
+        return f"{self.value_name}: {value:.0f}"
+
+    @property
+    def slice_z(self) -> float | None:
+        """z of the displayed slice, if the whole slice shares a single one."""
+        data = self.pix_label.data
+        if data is None or self.pix_label.plane != AXIAL or not data.has_image_positions:
+            return None
+        return data.voxel_position(self.pix_label.slice, 0, 0)[2]
+
+    def _clear_cursor_labels(self) -> None:
+        """Blank the readouts that only mean something under the cursor."""
+        for label in (self.ij_label, self.x_label, self.y_label, self.hu_label):
+            label.setText("")
+
+    @property
+    def value_name(self) -> str:
+        """How to call the voxel values of the currently shown image."""
+        data = self.pix_label.data
+        return "HU" if data is not None and data.uses_hounsfield_units else "Value"
+
+    def update_cw(self) -> None:
+        data = self.pix_label.data
+        # Colour images are not windowed, so there is no window to report
+        if data is None or data.is_color:
+            self.cw_label.setText("")
+        else:
+            self.cw_label.setText(
+                f"W: {self.pix_label.window_width:.0f} C: {self.pix_label.window_center:.0f}"
+            )
+
+    @property
+    def file_name(self) -> str | None:
         return self._file_name
 
     @file_name.setter
-    def file_name(self, value):
-        try:
-            self._file_name = value
-            data = DicomData.from_files([self._file_name])
-            self.pix_label.data = data
-            self.setWindowTitle("pydiq: " + self._file_name)
-        except BaseException as exc:
-            print(exc)
-            self.pix_label.data = None
-            self.setWindowTitle("pydiq: No image")
+    def file_name(self, value: str | None) -> None:
+        self._file_name = value
+        if value is None:
+            self._show_no_image()
+        else:
+            try:
+                self.pix_label.data = DicomData.from_files([value])
+                self.setWindowTitle(f"pydiq: {value}")
+                self.name_label.setText(os.path.basename(value))
+            except BaseException:
+                logger.exception("Could not load image from %s", value)
+                self._show_no_image()
+        self.update_coordinates()
 
-            # try:
-            #     self.image_position = np.array([float(t) for t in self.file.ImagePositionPatient])
-            # except:
-            #     self.image_position = np.array([1., 1., 1.])
-            # self.pixel_spacing = np.array([float(t) for t in self.file.PixelSpacing])
-
+    def _show_no_image(self) -> None:
+        self.pix_label.data = None
+        self.setWindowTitle("pydiq: No image")
+        self.name_label.setText("")
 

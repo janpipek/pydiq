@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pydiq"
+version = "0.3.0"
+description = "Simple open-source DICOM browser/viewer in Python and Qt."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Jan Pipek", email = "jan.pipek@gmail.com" }]
+keywords = ["dicom", "medical-imaging", "viewer", "qt"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Healthcare Industry",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+dependencies = [
+    "click",
+    "numpy",
+    "pydicom>=3",
+    # Decoders for compressed pixel data - pydicom itself only reads
+    # uncompressed (and RLE) images. This is pydicom's "pixeldata" extra
+    # without the GPL-licensed pylibjpeg-libjpeg and without pyjpegls,
+    # which ships no wheels for recent Pythons; python-gdcm covers JPEG-LS.
+    "pillow",
+    "pylibjpeg[openjpeg]",
+    "python-gdcm",
+    "PySide6",
+    "qtpy",
+]
+
+[project.scripts]
+pydiq = "pydiq:run_app"
+
+[project.urls]
+Homepage = "https://github.com/janpipek/pydiq"
+Repository = "https://github.com/janpipek/pydiq"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.1",
+    "ruff",
+]

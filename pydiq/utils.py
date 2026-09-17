@@ -1,11 +1,14 @@
+import logging
 import os
-from typing import List, Tuple
 
 import pydicom
 
 
-def get_id(path: str) -> Tuple[str, str]:
-    f = pydicom.read_file(path, stop_before_pixels=True)
+logger = logging.getLogger(__name__)
+
+
+def get_id(path: str) -> tuple[str, str]:
+    f = pydicom.dcmread(path, stop_before_pixels=True)
     return f.StudyInstanceUID, f.SeriesInstanceUID
 
 
@@ -16,11 +19,12 @@ def is_dicom_file(path: str) -> bool:
     try:
         with open(path, "rb") as f:
             return f.read(132).decode("ASCII")[-4:] == "DICM"
-    except:
+    except Exception:
+        logger.debug("Cannot read %s.", path, exc_info=True)
         return False
 
 
-def dicom_files_in_dir(directory: str = ".") -> List[str]:
+def dicom_files_in_dir(directory: str = ".") -> list[str]:
     """Full paths of all DICOM files in the directory."""
     directory = os.path.expanduser(directory)
     candidates = [os.path.join(directory, f) for f in sorted(os.listdir(directory))]
