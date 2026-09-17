@@ -10,6 +10,8 @@ Simple open-source multi-platform DICOM browser/viewer in Python and Qt.
 
 ![Vertebrae](https://raw.githubusercontent.com/janpipek/pydiq/master/doc/vertebra.png "Vertebrae")
 
+Try getting some images from <https://github.com/robyoung/dicom-test-files>
+
 Features
 --------
 
@@ -43,7 +45,7 @@ Tested on Linux and Windows.
 
 Installation
 ------------
-The easiest way is `pip install pydiq`.
+The easiest way is `uv tool install pydiq` but you may as well use pip.
 
 Usage
 -----
