@@ -1,3 +1,22 @@
+0.3.0 (17th Sep 2026)
+---------------------
+- Dependency: Require Python 3.10, pydicom 3 and PySide6 (via qtpy)
+- Dependency: pillow, pylibjpeg-openjpeg and python-gdcm to read compressed
+  pixel data (JPEG, JPEG-LS, JPEG 2000, RLE)
+- Packaging: pyproject.toml / hatchling instead of setup.py, type hints and
+  py.typed shipped with the package
+- Feature: Show any file whose pixel data can be read instead of a fixed list
+  of modalities; files without an image are refused with a reason
+- Feature: Show every image a file holds, one entry per frame, with per-frame
+  geometry and calibration from functional group sequences
+- Feature: Show colour images (RGB, YBR, palette)
+- Feature: -v/--verbose option; logging instead of debug prints
+- Fix: Status bar reports the voxel actually under the cursor - correct z for
+  a stack, correct x/y axes for PixelSpacing, no readout outside the image,
+  nothing invented where the file says nothing
+- Fix: Qt6 scoped enums, menu shortcuts and labels; the plane could never be
+  changed
+
 0.2.2 (4th Oct 2019)
 --------------------
 - Dependency: Require `pydicom` instead of `dicom` (i.e. the 1.x.x version)

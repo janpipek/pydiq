@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pydiq"
-version = "0.2.2"
+version = "0.3.0"
 description = "Simple open-source DICOM browser/viewer in Python and Qt."
 readme = "README.md"
 requires-python = ">=3.10"
